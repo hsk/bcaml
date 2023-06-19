@@ -1,4 +1,3 @@
 (executable
  (public_name bcaml)
- (name main)
- (libraries bcaml))
+ (name main))
