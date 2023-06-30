@@ -6,7 +6,7 @@ type pos = (int * int)
 
 type 'a loc = {info:'a; loc:(pos *pos)}
 
-type tyvar = {id:int; level:int}
+type tyvar = {id:int; level:int ref}
 
 type constant =
 | Cint of int
@@ -36,7 +36,8 @@ and expr' = {e_desc: expr_desc; e_ty: ty ref}
 and expr = expr' loc
 
 and expr_desc =
-| Eident of string
+| Elocal of string
+| Eglobal of string
 | Econstant of constant
 | Etuple of expr list
 | Econstruct of string * expr option
@@ -70,27 +71,25 @@ and pat_desc =
 | Pconstraint of pat * ty
 | Precord of (string * pat) list
 
-type impl_phrase' = {im_desc: impl_desc}
+type value =
+| Vbuildin of buildin
+| Vconst of constant 
+| Vclosure of (pat * expr) list
+| Vtuple of value list
+| Vconstruct of string * value option
+| Vrecord of (string * value) list
 
-and impl_phrase = impl_phrase' loc
+type type_decl =
+| Drecord of string * tyvar list * (string * ty) list
+| Dvariant of string * tyvar list * (string * ty) list
+| Dabbrev of string * tyvar list * ty
+| Dabstract of string * ty option
+
+and impl_phrase = impl_desc loc
 
 and impl_desc =
 | Imexpr of expr
-| Imletdef of bool * (pat * ty) list * expr
-| Imrecord of string * tyvar list * (string * ty) list
-| Imvariant of string * tyvar list * (string * ty) list
-| Imabbrev of string * tyvar list * ty
-| Imabstract of string * ty option
+| Imletdef of bool * (pat * expr) list
+| Imtypedef of type_decl list
 | Imexcdef of string * ty option
 
-type intf_phrase' = {in_desc: intf_desc}
-
-and intf_phrase = intf_phrase' loc
-
-and intf_desc =
-| Invaldecl of (string * ty) list
-| Inrecord of string * tyvar list * (string * ty) list
-| Invariant of string * tyvar list * (string * ty) list
-| Inabbrev of string * tyvar list * ty
-| Inabstract of string * ty option
-| Inexcdecl of string * ty option
