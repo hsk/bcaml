@@ -23,7 +23,6 @@
 %token MOD OR
 %token AMPER AMPERAMPER
 %token LAND LOR LXOR
-%token <string> INFIXOP0 INFIXOP1 INFIXOP2 INFIXOP3 INFIXOP4
 %token EOF
 
 %nonassoc IN
@@ -34,12 +33,12 @@
 %left BAR
 %left OR BARBAR
 %left AMPER AMPERAMPER
-%left  INFIXOP0 EQUAL
-%right INFIXOP1 AT
+%left  EQUAL
+%right AT
 %right CONS
-%left  INFIXOP2 PLUS MINUS MINUSDOT REF DEREF
-%left  INFIXOP3 STAR MOD LAND LOR LXOR
-%right INFIXOP4 LSL LSR ASR
+%left  PLUS MINUS MINUSDOT REF DEREF
+%left  STAR MOD LAND LOR LXOR
+%right LSL LSR ASR
 
 %start<()> top
 
@@ -196,12 +195,6 @@ ident:
     { "&&" }
 | AT
     { "@" }
-| op = INFIXOP0
-    { op }
-| op = INFIXOP1
-    { op }
-| op = INFIXOP2
-    { op }
 | PLUS
     { "+" }
 | MINUSDOT
@@ -210,12 +203,8 @@ ident:
     { "-" }
 | EQUAL
     { "=" }
-| op = INFIXOP3
-    { op }
 | STAR
     { "*" }
-| op = INFIXOP4
-    { op }
 | MOD
     { "mod" }
 | LAND
