@@ -27,14 +27,11 @@ rule token = parse
 | [' ' '\r' '\t']     { token lexbuf }
 | "(*"                { comment 0 lexbuf }
 | int                 { INT (int_of_string (Lexing.lexeme lexbuf)) }
-| int_                { try
-                            INT (int_of_string (Lexing.lexeme lexbuf))
-                          with Failure _ -> Error.syntax ~loc:(Location.of_lexeme lexbuf) "Invalid integer constant"
-                      }
+| int_                { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | float               { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
 | '"'                 { STRING (string "" lexbuf) }
-| "(" { LPAR }
-| ")" { RPAR }
+| "(" { LPAREN }
+| ")" { RPAREN }
 | "[" { LBRACK }
 | "]" { RBRACK }
 | "{" { LBRACE }
@@ -46,25 +43,28 @@ rule token = parse
 | ":" { COLON }
 | "." { DOT }
 
-| "=" { EQ }
+| "=" { EQUAL }
 | "->" { ARROW }
 | "!" { DEREF }
 | ":=" { ASSIGN }
 | "::" { CONS }
 
-| "+" { ADDOP }
-| "-" { SUBOP }
-| "*" { MULOP }
+| "+" { PLUS }
+| "-." { MINUSDOT }
+| "-" { MINUS }
+| "*" { STAR }
 | "/" { DIVOP }
-| "%" { MODOP }
-| "&&" { ANDOP }
-| "||" { OROP }
-| "^^" { XOROP }
-| "<<" { SHLOP }
-| ">>" { SHROP }
+| "%" { MOD }
+| "&&" { AMPERAMPER }
+| "||" { BARBAR }
+| "lor" { LOR }
+| "lxor" { LXOR }
+| "lsl" { LSL }
+| "lsr" { LSR }
+| "asr" { ASR }
 
 
-| "==" { EQOP }
+| "=" { EQOP }
 | "<>" { NEOP }
 | "<" { LTOP }
 | ">" { GTOP }
@@ -76,11 +76,8 @@ rule token = parse
 
 | "_" { WILD }
 | "and" { AND }
-| "assert" { ASSERT }
-| "case" { CASE }
-| "data" { DATA }
-| "do" { DO }
 | "else" { ELSE }
+| "function" { FUNCTION }
 | "fun" { FUN }
 | "if" { IF }
 | "in" { IN }
@@ -91,8 +88,7 @@ rule token = parse
 | "ref" { REF }
 | "then" { THEN }
 | "type" { TYPE }
-| "val" { VAL }
-| "with" { WITH }
+
 
 | lid as s { LID s }
 | uid as s { UID s }

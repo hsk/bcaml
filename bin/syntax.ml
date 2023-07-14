@@ -14,7 +14,6 @@ type constant =
 
 type ty =
 | Tvar of tyvar
-(*
 | Tunit
 | Tbool
 | Tint 
@@ -23,11 +22,9 @@ type ty =
 | Tstring
 | Tlist of ty
 | Tref of ty
-*)
-| Tname of string
 | Tarrow of ty * ty
-| Tconstr of ty * ty list
 | Ttuple of ty list
+| Tconstr of string * ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
 | Tabbrev of string * ty list
@@ -45,7 +42,7 @@ and expr =
 | Eapply of expr * expr list
 | Elet of (pat * expr) list * expr
 | Eletrec of (pat * expr) list * expr
-| Efunction of (pat list * expr) list
+| Efunction of (pat * expr) list
 | Etrywith of expr * (pat * expr) list
 | Esequence of expr * expr
 | Econdition of expr * expr * expr
@@ -59,6 +56,7 @@ and expr =
 and pat =
 | Pwild
 | Pvar of string
+| Pparams of pat list
 | Palias of pat * string
 | Pconstant of constant
 | Ptuple of pat list

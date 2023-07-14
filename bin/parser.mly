@@ -18,7 +18,7 @@ open Syntax
 %token LET REC AND IN
 %token FUN BAR BARBAR
 %token IF THEN ELSE WHEN
-%token REF DEREF
+%token REF DEREF ASSIGN
 %token AT
 %token PLUS STAR MINUS MINUSDOT
 %token LSL LSR ASR
@@ -32,6 +32,7 @@ open Syntax
 %right SEMI
 %right prec_list
 %nonassoc ELSE
+%right ASSIGN
 %left AS
 %left BAR
 %left OR BARBAR
@@ -225,6 +226,8 @@ ident:
     { "-" }
 | EQUAL
     { "=" }
+| ASSIGN
+    { ":=" }
 | STAR
     { "*" }
 | MOD
@@ -281,8 +284,8 @@ simple_ty:
     { Tconstr($6,$2::$4) }
 | simple_ty tyname
     { Tconstr($2,$1::[]) }
-|  tyname
-    { Tname $1 }
+| tyname
+    { Tconstr($1,[]) }
 | param
     { Tvar $1 }
 | LPAREN ty RPAREN
