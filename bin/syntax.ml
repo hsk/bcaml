@@ -2,20 +2,19 @@
 let generic = -1
 let notgeneric = 0
 
-type pos = (int * int)
 
-type 'a loc = {info:'a; loc:(pos *pos)}
-
-type tyvar = {id:int; level:int ref}
+type tyvar = {id:string; level:int ref}
 
 type constant =
 | Cint of int
+| Cbool of bool
 | Cfloat of float
 | Cstring of string
 | Cchar of char
 
 type ty =
 | Tvar of tyvar
+(*
 | Tunit
 | Tbool
 | Tint 
@@ -24,31 +23,32 @@ type ty =
 | Tstring
 | Tlist of ty
 | Tref of ty
+*)
+| Tname of string
 | Tarrow of ty * ty
+| Tconstr of ty * ty list
 | Ttuple of ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
 | Tabbrev of string * ty list
-| Tabstract of string
 
-and expr' = {e_desc: expr_desc; e_ty: ty ref}
 
-and expr = expr' loc
 
-and expr_desc =
-| Elocal of string
-| Eglobal of string
+and expr =
+| Evar of string
 | Econstant of constant
+| Ebuildin of buildin
 | Etuple of expr list
-| Econstruct of string * expr option
+| Elist of expr list
+| Econstruct_ of string
+| Econstruct of string * expr
 | Eapply of expr * expr list
-| Elet of bool * (pat * expr) list * expr
+| Elet of (pat * expr) list * expr
+| Eletrec of (pat * expr) list * expr
 | Efunction of (pat list * expr) list
 | Etrywith of expr * (pat * expr) list
 | Esequence of expr * expr
 | Econdition of expr * expr * expr
-| Ewhile of expr * expr
-| Efor of string * expr * expr * bool * expr
 | Econstraint of expr * ty
 | Eassign of string * expr
 | Erecord of (string * expr) list
@@ -56,40 +56,31 @@ and expr_desc =
 | Erecord_update of expr * string * expr
 | Ewhen of expr * expr
 
-and pat' = {p_desc: pat_desc; p_ty: ty ref}
-
-and pat = pat' loc
-
-and pat_desc =
+and pat =
 | Pwild
 | Pvar of string
 | Palias of pat * string
 | Pconstant of constant
 | Ptuple of pat list
-| Pconstruct of string * pat option
+| Pconstruct_ of string
+| Pconstruct of string * pat
 | Por of pat * pat
 | Pconstraint of pat * ty
 | Precord of (string * pat) list
 
-type value =
-| Vbuildin of buildin
-| Vconst of constant 
-| Vclosure of (pat * expr) list
-| Vtuple of value list
-| Vconstruct of string * value option
-| Vrecord of (string * value) list
-
 type type_decl =
 | Drecord of string * tyvar list * (string * ty) list
-| Dvariant of string * tyvar list * (string * ty) list
+| Dvariant of string * tyvar list * tag list
 | Dabbrev of string * tyvar list * ty
-| Dabstract of string * ty option
 
-and impl_phrase = impl_desc loc
+type tag =
+| Gconstruct_ of string
+| Gconstruct of string * ty
 
-and impl_desc =
-| Imexpr of expr
-| Imletdef of bool * (pat * expr) list
-| Imtypedef of type_decl list
-| Imexcdef of string * ty option
+and def =
+| Defexpr of expr
+| Deflet of (pat * expr) list
+| Defletrec of (pat * expr) list
+| Deftype of type_decl list
+| Defexc of string * ty option
 
