@@ -3,7 +3,11 @@ let generic = -1
 let notgeneric = 0
 
 
-type tyvar = {id:string; level:int ref}
+type tyvar = {id:string; level:int}
+
+type linkto =
+| Unbound of tyvar
+| Link of ty
 
 type constant =
 | Cint of int
@@ -13,7 +17,7 @@ type constant =
 | Cchar of char
 
 type ty =
-| Tvar of tyvar
+| Tvar of linkto ref
 | Tunit
 | Tbool
 | Tint 
@@ -27,7 +31,6 @@ type ty =
 | Tconstr of string * ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
-| Tabbrev of string * ty list
 
 
 
@@ -75,10 +78,11 @@ type tag =
 | Gconstruct_ of string
 | Gconstruct of string * ty
 
-and def =
+and def_item =
 | Defexpr of expr
 | Deflet of (pat * expr) list
 | Defletrec of (pat * expr) list
 | Deftype of type_decl list
 | Defexc of string * ty option
 
+and def = (int * def_item)
