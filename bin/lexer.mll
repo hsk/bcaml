@@ -53,7 +53,12 @@ rule token = parse
 | "-." { MINUSDOT }
 | "-" { MINUS }
 | "*" { STAR }
-| "/" { DIVOP }
+| "/" { DIV }
+| "+." { PLUSDOT }
+| "-." { MINUSDOT }
+| "*." { STARDOT }
+| "/." { DIVDOT }
+| "**" { STARSTAR }
 | "%" { MOD }
 | "&&" { AMPERAMPER }
 | "||" { BARBAR }
@@ -64,14 +69,14 @@ rule token = parse
 | "asr" { ASR }
 
 
-| "=" { EQOP }
-| "<>" { NEOP }
-| "<" { LTOP }
-| ">" { GTOP }
-| "<=" { LEOP }
-| ">=" { GEOP }
+| "=" { EQ }
+| "<>" { NE }
+| "<" { LT }
+| ">" { GT }
+| "<=" { LE }
+| ">=" { GE }
 
-| "~" { NOTOP }
+| "~" { NOT }
 
 
 | "_" { WILD }

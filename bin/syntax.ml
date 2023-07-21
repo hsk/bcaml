@@ -2,12 +2,15 @@
 let generic = -1
 let notgeneric = 0
 
+type id_kind =
+| Idint of int
+| Idstr of string
 
-type tyvar = {id:string; level:int}
+type tyvar = {id:id_kind; level:int}
 
-type linkto =
+type link =
 | Unbound of tyvar
-| Link of ty
+| Linkto of ty
 
 type constant =
 | Cint of int
@@ -16,8 +19,11 @@ type constant =
 | Cstring of string
 | Cchar of char
 
+type buildin =
+| BAddint
+
 type ty =
-| Tvar of linkto ref
+| Tvar of link ref
 | Tunit
 | Tbool
 | Tint 

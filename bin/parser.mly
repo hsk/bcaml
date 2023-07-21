@@ -5,10 +5,10 @@ open Syntax
 %}
 
 %token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE
-%token COLON COMMA SEMI SEMISEMI EQUAL CONS QUOTE
+%token COLON COMMA SEMI SEMISEMI CONS QUOTE
 %token BEGIN END
 %token <string> LID UID
-%token UNDERSCORE AS
+%token WILD AS
 %token <int> INT
 %token <string> STRING
 %token <bool> BOOL
@@ -20,10 +20,14 @@ open Syntax
 %token IF THEN ELSE WHEN
 %token REF DEREF ASSIGN
 %token AT
-%token PLUS STAR MINUS MINUSDOT
+%token EQ NQ LT GT LE GE
+%token PLUS PLUSDOT
+%token STAR STARDOT STARSTAR
+%token MINUS MINUSDOT
+%token DIV DIVDOT
 %token LSL LSR ASR
-%token MOD OR
-%token AMPER AMPERAMPER
+%token MOD
+%token AMPERAMPER
 %token LAND LOR LXOR
 %token EOF
 
@@ -35,14 +39,14 @@ open Syntax
 %right ASSIGN
 %left AS
 %left BAR
-%left OR BARBAR
-%left AMPER AMPERAMPER
-%left  EQUAL
+%left BARBAR
+%left AMPERAMPER
+%left  EQ NQ LT GT LE GE
 %right AT
 %right CONS
-%left  PLUS MINUS MINUSDOT REF DEREF
-%left  STAR MOD LAND LOR LXOR
-%right LSL LSR ASR
+%left  PLUS PLUSDOT MINUS MINUSDOT REF DEREF
+%left  STAR STARDOT DIV DIVDOT MOD LAND LOR LXOR
+%right LSL LSR ASR STARSTAR
 
 %start<def list> top
 
@@ -111,9 +115,9 @@ expr_semi_list:
   { Econstruct("::",Etuple($1::(Econstruct_ "[]")::[])) }
 
 expr_label_list:
-| expr_label_list SEMI field EQUAL expr %prec prec_list
+| expr_label_list SEMI field EQ expr %prec prec_list
   { ($3,$5)::$1 }
-| field EQUAL expr %prec prec_list
+| field EQ expr %prec prec_list
   { ($1,$3)::[] }
   
 
@@ -130,17 +134,17 @@ function_case:
     { ($1,Ewhen($3,$5)) }
 
 let_def:
-| pat EQUAL expr
+| pat EQ expr
     { ($1,$3) }
-| ident nonempty_list(simple_pat) EQUAL expr
+| ident nonempty_list(simple_pat) EQ expr
     { (Pvar $1,Efunction(($2,$4)::[])) }
-| ident nonempty_list(simple_pat) COLON ty EQUAL expr
+| ident nonempty_list(simple_pat) COLON ty EQ expr
     { (Pvar $1,Efunction(($2,Econstraint($6,$4))::[])) }
 
 let_rec_def:
-| ident nonempty_list(simple_pat) EQUAL expr
+| ident nonempty_list(simple_pat) EQ expr
     { (Pvar $1,Efunction(($2,$4)::[])) }
-| ident nonempty_list(simple_pat) COLON ty EQUAL expr
+| ident nonempty_list(simple_pat) COLON ty EQ expr
     { (Pvar $1,Efunction(($2,Econstraint($6,$4))::[])) }
 
 pat: 
@@ -170,11 +174,11 @@ simple_pat:
     { Pvar $1 }
 | UID
     { Pconstruct_ $1 }
-| UNDERSCORE
+| WILD
     { Pwild }
 | const_expr
     { Pconstant $1 }
-| LBRACE separated_nonempty_list(SEMI, separated_pair(field, EQUAL, pat)) RBRACE
+| LBRACE separated_nonempty_list(SEMI, separated_pair(field, EQ, pat)) RBRACE
     { Precord $2 }
 | LBRACK pat_semi_list RBRACK
     { $2 }
@@ -208,28 +212,44 @@ ident:
     { $2 }
 
 %inline binop:
-| OR
-    { "or" }
 | BARBAR
     { "||" }
-| AMPER
-    { "&" }
 | AMPERAMPER
     { "&&" }
+| EQ
+    { "=" }
+| NQ
+    { "<>" }
+| LT
+    { "<" }
+| GT
+    { ">" }
+| LE
+    { "<=" }
+| GE
+    { ">=" }
+| ASSIGN
+    { ":=" }
 | AT
     { "@" }
 | PLUS
     { "+" }
-| MINUSDOT
-    { "-." }
 | MINUS
     { "-" }
-| EQUAL
-    { "=" }
-| ASSIGN
-    { ":=" }
 | STAR
     { "*" }
+| DIV
+    { "/" }
+| PLUSDOT
+    { "+." }
+| MINUSDOT
+    { "-." }
+| STARDOT
+    { "*." }
+| DIVDOT
+    { "/." }
+| STARSTAR
+    { "**" }
 | MOD
     { "mod" }
 | LAND
@@ -260,11 +280,11 @@ params:
     { $2 }
 
 ty_def:
-| params tyname EQUAL LBRACE separated_nonempty_list(SEMI, separated_pair(field, COLON, ty)) RBRACE
+| params tyname EQ LBRACE separated_nonempty_list(SEMI, separated_pair(field, COLON, ty)) RBRACE
     { Drecord($2,$1,$5) }
-| params tyname EQUAL nonempty_list(BAR sum_case { $2 })
+| params tyname EQ nonempty_list(BAR sum_case { $2 })
     { Dvariant($2,$1,$4) }
-| params tyname EQUAL ty
+| params tyname EQ ty
     { $1 }
 
 ty: 
