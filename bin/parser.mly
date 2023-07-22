@@ -44,6 +44,7 @@
 %right SEMI
 %right prec_list
 %nonassoc ELSE
+
 %right ASSIGN
 %left AS
 %left BAR
@@ -81,12 +82,12 @@ def:
 
 expr:
 | simple_expr { $1 }
-| simple_expr simple_expr+ { Eapply($1,$2) }
-| MATCH expr WITH nonempty_list(BAR function_case { $2 })
+| simple_expr_ simple_expr+ { Eapply($1,$2) }
+| MATCH expr WITH function_case
     { Eapply(Efunction($4),[$2]) }
-| FUNCTION nonempty_list(BAR function_case { $2 })
+| FUNCTION function_case
     { Efunction($2) }
-| FUN function_case
+| FUN fun_case
     { Efunction([$2]) }
 | LET separated_nonempty_list(AND, let_def) IN expr
     { Elet($2,$4) }
@@ -103,10 +104,14 @@ expr:
 | NOT expr  { Eapply(Evar("not"),$2::[]) }
 | REF expr { Econstruct("ref",Etuple($2::[])) }
 | DEREF expr { Econstruct("!",Etuple($2::[])) }
+| UID simple_expr { Econstruct($1,$2) }
 
 simple_expr:
-| ident { Evar $1 }
 | UID { Econstruct_ $1 }
+| simple_expr_ { $1 }
+
+simple_expr_:
+| ident { Evar $1 }
 | const_expr { Econstant $1 }
 | LBRACK RBRACK { Econstruct_ "[]" }
 | LBRACK expr_semi_list RBRACK { $2 }
@@ -139,11 +144,20 @@ const_expr:
 | BOOL { (Cbool($1)) }
 | FLOAT { (Cfloat($1)) }
 
-function_case:
+fun_case:
 | nonempty_list(simple_pat) ARROW expr
     { (Pparams $1,$3) }
-| nonempty_list(simple_pat) WHEN expr ARROW expr
-    { (Pparams $1,Ewhen($3,$5)) }
+
+function_case:
+| BAR pat ARROW expr
+    { [($2,$4)] }
+| BAR pat WHEN expr ARROW expr
+    { [($2,Ewhen($4,$6))] }
+| BAR pat ARROW expr function_case
+    { ($2,$4)::$5 }
+| BAR pat WHEN expr ARROW expr function_case
+    { ($2,Ewhen($4,$6))::$7 }
+
 
 let_def:
 | pat EQ expr
