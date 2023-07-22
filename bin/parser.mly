@@ -6,7 +6,7 @@
 
   let gen_id () =
     let ret = !curr_id in
-    curr_id := !curr_id + 1;
+    incr curr_id;
     ret
 
 %}
