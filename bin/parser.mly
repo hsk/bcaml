@@ -17,6 +17,7 @@
 %token <string> LID UID
 %token WILD AS
 %token <int> INT
+%token <char> CHAR
 %token <string> STRING
 %token <bool> BOOL
 %token <float> FLOAT
@@ -133,6 +134,7 @@ expr_label_list:
 
 const_expr:
 | INT { (Cint($1)) }
+| CHAR { (Cchar($1)) }
 | STRING { (Cstring($1)) }
 | BOOL { (Cbool($1)) }
 | FLOAT { (Cfloat($1)) }

@@ -1,5 +1,21 @@
 {
   open Parser
+
+  let escaped_chars = [
+    ('\\', "\\");
+    ('\'', "'");
+    ('"', "\"");
+    ('n', "\n");
+    ('t', "\t");
+    ('b', "\b");
+    ('r', "\r");
+  ]
+
+  let escaped_conv char =
+    try 
+      List.assoc char escaped_chars
+    with Not_found ->
+      failwith "escaped_conv error"
 }
 
 let lid = ( ['a'-'z'] ['_' 'a'-'z' 'A'-'Z' '0'-'9' '\'']*
@@ -29,6 +45,9 @@ rule token = parse
 | int                 { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | int_                { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | float               { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
+| ([^ '\\' '\''] as c) "'"  { CHAR c }
+| '\\' (['\\' '\'' 'n' 't' 'b' 'r'] as c) "'" { CHAR ((escaped_conv c).[0]) }
+| [^ '\'']* ("'" | eof) { failwith "lexer char error" }
 | '"'                 { STRING (string "" lexbuf) }
 | "(" { LPAREN }
 | ")" { RPAREN }
@@ -60,6 +79,7 @@ rule token = parse
 | "/." { DIVDOT }
 | "**" { STARSTAR }
 | "%" { MOD }
+| "'" { QUOTE }
 | "&&" { AMPERAMPER }
 | "||" { BARBAR }
 | "land" {LAND }
@@ -101,24 +121,18 @@ rule token = parse
 
 | eof { EOF }
 
-| _ { failwith "lexer error" }
+| _ { failwith "lexer token error" }
 
 
 and comment n = parse
-| "*)"                {  }
-| "(*"                {  }
-| '\n'                {  }
-| _                   {  }
-| eof                 {  }
+| "*)"                { if n = 0 then token lexbuf else comment (n - 1) lexbuf }
+| "(*"                { comment (n + 1) lexbuf }
+| '\n'                { Lexing.new_line lexbuf; comment n lexbuf }
+| _                   { comment n lexbuf }
+| eof                 { failwith "lexer comment error" }
 
-
-and char = parse
-| [^ '\\' '\''] "'"  {  }
-| '\\' ['\\' '\'' 'n' 't' 'b' 'r'] "'" {  }
-| [^ '\'']* ("'" | eof) { }
-
-and string = parse
-| '"'   { }
-| '\\' ['\\' '"' 'n' 't' 'b' 'r'] {  }
-| eof {  }
-| _ { }
+and string acc = parse
+| '"'   { acc }
+| '\\' (['\\' '"' 'n' 't' 'b' 'r'] as c) { string (acc ^ (escaped_conv c)) lexbuf }
+| eof { failwith "lexer token error" }
+| _ { string (acc ^ (Lexing.lexeme lexbuf)) lexbuf }
