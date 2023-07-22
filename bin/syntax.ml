@@ -4,9 +4,11 @@ type constant =
 | Cfloat of float
 | Cstring of string
 | Cchar of char
+[@@deriving show]
 
 type buildin =
 | BAddint
+[@@deriving show]
 
 let generic = -1
 let notgeneric = 0
@@ -14,12 +16,15 @@ let notgeneric = 0
 type id_kind =
 | Idint of int
 | Idstr of string
+[@@deriving show]
 
 type tyvar = {id:id_kind; level:int}
+[@@deriving show]
 
 type link =
 | Unbound of tyvar
 | Linkto of ty
+[@@deriving show]
 
 and ty =
 | Tvar of link ref
@@ -36,6 +41,7 @@ and ty =
 | Tconstr of string * ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
+[@@deriving show]
 
 and expr =
 | Evar of string
@@ -56,8 +62,8 @@ and expr =
 | Eassign of string * expr
 | Erecord of (string * expr) list
 | Erecord_access of expr * string
-| Erecord_update of expr * string * expr
 | Ewhen of expr * expr
+[@@deriving show]
 
 and pat =
 | Pwild
@@ -71,15 +77,18 @@ and pat =
 | Por of pat * pat
 | Pconstraint of pat * ty
 | Precord of (string * pat) list
+[@@deriving show]
 
 type type_decl =
 | Drecord of string * tyvar list * (string * ty) list
 | Dvariant of string * tyvar list * tag list
 | Dabbrev of string * tyvar list * ty
+[@@deriving show]
 
 and tag =
 | Gconstruct_ of string
 | Gconstruct of string * ty
+[@@deriving show]
 
 and def_item =
 | Defexpr of expr
@@ -87,5 +96,10 @@ and def_item =
 | Defletrec of (pat * expr) list
 | Deftype of type_decl list
 | Defexc of string * ty option
+[@@deriving show]
 
 and def = (int * def_item)
+[@@deriving show]
+
+and def_list = def list
+[@@deriving show]

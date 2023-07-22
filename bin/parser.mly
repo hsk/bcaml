@@ -12,7 +12,7 @@
 %}
 
 %token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE
-%token COLON COMMA SEMI SEMISEMI CONS QUOTE
+%token COLON COMMA SEMI SEMISEMI CONS QUOTE DOT
 %token BEGIN END
 %token <string> LID UID
 %token WILD AS
@@ -34,8 +34,8 @@
 %token DIV DIVDOT
 %token LSL LSR ASR
 %token MOD
-%token AMPERAMPER
-%token LAND LOR LXOR
+%token AMPERAMPER NOT
+%token LAND LOR LXOR LNOT
 %token EOF
 
 %nonassoc IN
@@ -48,12 +48,14 @@
 %left BAR
 %left BARBAR
 %left AMPERAMPER
-%left  EQ NQ LT GT LE GE
+%left EQ NQ LT GT LE GE 
 %right AT
 %right CONS
-%left  PLUS PLUSDOT MINUS MINUSDOT REF DEREF
+%left  PLUS PLUSDOT MINUS MINUSDOT
 %left  STAR STARDOT DIV DIVDOT MOD LAND LOR LXOR
 %right LSL LSR ASR STARSTAR
+%right prec_uminus
+%right REF DEREF LNOT NOT
 
 %start<def list> top
 
@@ -94,8 +96,10 @@ expr:
     { Econdition($2,$4,$6) }
 | expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
 | expr CONS expr { Econstruct("::",Etuple($1::$3::[])) }
-| MINUS expr { Eapply(Evar("-"),$2::[]) }
-| MINUSDOT expr { Eapply(Evar("-."),$2::[]) }
+| MINUS expr %prec prec_uminus { Eapply(Evar("-"),$2::[]) }
+| MINUSDOT expr %prec prec_uminus { Eapply(Evar("-."),$2::[]) }
+| LNOT expr  { Eapply(Evar("lnot"),$2::[]) }
+| NOT expr  { Eapply(Evar("not"),$2::[]) }
 | REF expr { Econstruct("ref",Etuple($2::[])) }
 | DEREF expr { Econstruct("!",Etuple($2::[])) }
 
@@ -112,6 +116,7 @@ simple_expr:
 | LPAREN expr COLON ty RPAREN { Econstraint($2,$4) }
 | LPAREN expr RPAREN { $2 }
 | BEGIN expr END { $2 }
+| simple_expr DOT LID { Erecord_access($1,$3) }
 
 expr_semi_list:
 | expr_semi_list SEMI expr %prec prec_list 

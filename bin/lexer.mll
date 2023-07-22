@@ -1,5 +1,5 @@
 {
-
+  open Parser
 }
 
 let lid = ( ['a'-'z'] ['_' 'a'-'z' 'A'-'Z' '0'-'9' '\'']*
@@ -43,7 +43,7 @@ rule token = parse
 | ":" { COLON }
 | "." { DOT }
 
-| "=" { EQUAL }
+| "=" { EQ }
 | "->" { ARROW }
 | "!" { DEREF }
 | ":=" { ASSIGN }
@@ -62,7 +62,7 @@ rule token = parse
 | "%" { MOD }
 | "&&" { AMPERAMPER }
 | "||" { BARBAR }
-| "land" {LAND}
+| "land" {LAND }
 | "lor" { LOR }
 | "lxor" { LXOR }
 | "lnot" {LNOT }
@@ -71,13 +71,13 @@ rule token = parse
 | "asr" { ASR }
 
 | "=" { EQ }
-| "<>" { NE }
+| "<>" { NQ }
 | "<" { LT }
 | ">" { GT }
 | "<=" { LE }
 | ">=" { GE }
 
-| "~" { NOT }
+| "not" { NOT }
 
 
 | "_" { WILD }
@@ -87,7 +87,7 @@ rule token = parse
 | "fun" { FUN }
 | "if" { IF }
 | "in" { IN }
-| "import" { IMPORT }
+(*| "import" { IMPORT }*)
 | "let" { LET }
 | "of" { OF }
 | "rec" { REC }
@@ -101,7 +101,7 @@ rule token = parse
 
 | eof { EOF }
 
-| _ {  }
+| _ { failwith "lexer error" }
 
 
 and comment n = parse
