@@ -92,3 +92,34 @@ let rec nongen_type level ty =
   | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
     List.iter (nongen_type level) tyl
   | _ -> ()
+
+let type_instance level ty =
+  let ty = type_repr ty in
+  let ty_lv = get_type_level ty in
+  let id_var_hash = Hashtbl.create 10 in
+  let rec f ty =
+    match ty with
+    | Tvar link ->
+      begin match link with
+      | {contents=Unbound{id=id;level=level'}} when level' = generic ->
+        (
+          try 
+            Hashtbl.find id_var_hash id
+          with Not_found ->
+            let tvar = Tvar(ref (Linkto(new_type_var level))) in
+            Hashtbl.add id_var_hash id tvar;
+            tvar
+        )  
+      | {contents=Linkto ty} -> f ty
+      | _ -> ty
+      end
+    | Tlist ty when ty_lv = generic -> Tlist (f ty)
+    | Tref ty when ty_lv = generic -> Tref (f ty)
+    | Tarrow(arg,ret)
+      when ty_lv = generic -> Tarrow(f arg, f ret)
+    | Ttuple tyl when ty_lv = generic -> Ttuple(List.map f tyl)
+    | Tconstr(name,tyl) when ty_lv = generic -> Tconstr(name,List.map f tyl)
+    | Trecord(name,tyl) when ty_lv = generic -> Trecord(name,List.map f tyl)
+    | Tvariant(name,tyl) when ty_lv = generic -> Tvariant(name,List.map f tyl)
+    | _ -> ty
+  in f ty
