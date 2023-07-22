@@ -62,12 +62,13 @@ rule token = parse
 | "%" { MOD }
 | "&&" { AMPERAMPER }
 | "||" { BARBAR }
+| "land" {LAND}
 | "lor" { LOR }
 | "lxor" { LXOR }
+| "lnot" {LNOT }
 | "lsl" { LSL }
 | "lsr" { LSR }
 | "asr" { ASR }
-
 
 | "=" { EQ }
 | "<>" { NE }

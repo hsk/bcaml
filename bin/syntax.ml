@@ -1,3 +1,12 @@
+type constant =
+| Cint of int
+| Cbool of bool
+| Cfloat of float
+| Cstring of string
+| Cchar of char
+
+type buildin =
+| BAddint
 
 let generic = -1
 let notgeneric = 0
@@ -12,17 +21,7 @@ type link =
 | Unbound of tyvar
 | Linkto of ty
 
-type constant =
-| Cint of int
-| Cbool of bool
-| Cfloat of float
-| Cstring of string
-| Cchar of char
-
-type buildin =
-| BAddint
-
-type ty =
+and ty =
 | Tvar of link ref
 | Tunit
 | Tbool
@@ -37,8 +36,6 @@ type ty =
 | Tconstr of string * ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
-
-
 
 and expr =
 | Evar of string
@@ -80,7 +77,7 @@ type type_decl =
 | Dvariant of string * tyvar list * tag list
 | Dabbrev of string * tyvar list * ty
 
-type tag =
+and tag =
 | Gconstruct_ of string
 | Gconstruct of string * ty
 

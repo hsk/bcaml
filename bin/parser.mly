@@ -1,6 +1,13 @@
 %{
 
-open Syntax
+  open Syntax
+
+  let curr_id = ref 0
+
+  let gen_id () =
+    let ret = !curr_id in
+    curr_id := !curr_id + 1;
+    ret
 
 %}
 
@@ -55,13 +62,9 @@ open Syntax
 
 top:
 | def EOF
-    { $1 }
-| expr EOF
-    { Defexpr $1 }
+    { [(gen_id (), $1)] }
 | def SEMISEMI top
-    { $1::$3 }
-| expr SEMISEMI top
-     { (Defexpr $1)::$3 }
+    { (gen_id (), $1)::$3 }
 
 def: 
 | TYPE separated_nonempty_list(AND, ty_def)
@@ -70,6 +73,8 @@ def:
     { Deflet $2 }
 | LET REC separated_nonempty_list(AND, let_rec_def)
     { Defletrec $3 }
+| expr
+    { Defexpr $1 }
 
 expr:
 | simple_expr { $1 }
@@ -87,8 +92,8 @@ expr:
 | expr SEMI expr  { Esequence($1,$3) }
 | IF expr THEN expr ELSE expr
     { Econdition($2,$4,$6) }
-| expr binop expr  { Eapply($2,$1::$3::[]) }
-| expr CONS expr { Econstruct("::",Etuple($1::$2::[])) }
+| expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
+| expr CONS expr { Econstruct("::",Etuple($1::$3::[])) }
 | MINUS expr { Eapply(Evar("-"),$2::[]) }
 | MINUSDOT expr { Eapply(Evar("-."),$2::[]) }
 | REF expr { Econstruct("ref",Etuple($2::[])) }
@@ -97,9 +102,9 @@ expr:
 simple_expr:
 | ident { Evar $1 }
 | UID { Econstruct_ $1 }
-| const_expr { $1 }
+| const_expr { Econstant $1 }
 | LBRACK RBRACK { Econstruct_ "[]" }
-| LBRACK expr_semi_list RBRACK { $1 }
+| LBRACK expr_semi_list RBRACK { $2 }
 | LBRACE expr_label_list RBRACE { Erecord $2 }
 | LPAREN RPAREN { Econstruct_ "()" }
 | LPAREN expr COMMA separated_nonempty_list(COMMA,expr) RPAREN
@@ -110,7 +115,7 @@ simple_expr:
 
 expr_semi_list:
 | expr_semi_list SEMI expr %prec prec_list 
-  { Econstruct("::",Etuple($1::$2::[])) }
+  { Econstruct("::",Etuple($1::$3::[])) }
 | expr %prec prec_list
   { Econstruct("::",Etuple($1::(Econstruct_ "[]")::[])) }
 
@@ -122,36 +127,36 @@ expr_label_list:
   
 
 const_expr:
-| INT { Econstant(Cint($1)) }
-| STRING { Econstant(Cstring($1)) }
-| BOOL { Econstant(Cbool($1)) }
-| FLOAT { Econstant(Cfloat($1)) }
+| INT { (Cint($1)) }
+| STRING { (Cstring($1)) }
+| BOOL { (Cbool($1)) }
+| FLOAT { (Cfloat($1)) }
 
 function_case:
 | nonempty_list(simple_pat) ARROW expr
-    { ($1,$3) }
+    { (Pparams $1,$3) }
 | nonempty_list(simple_pat) WHEN expr ARROW expr
-    { ($1,Ewhen($3,$5)) }
+    { (Pparams $1,Ewhen($3,$5)) }
 
 let_def:
 | pat EQ expr
     { ($1,$3) }
 | ident nonempty_list(simple_pat) EQ expr
-    { (Pvar $1,Efunction(($2,$4)::[])) }
+    { (Pvar $1,Efunction((Pparams $2,$4)::[])) }
 | ident nonempty_list(simple_pat) COLON ty EQ expr
-    { (Pvar $1,Efunction(($2,Econstraint($6,$4))::[])) }
+    { (Pvar $1,Efunction((Pparams $2,Econstraint($6,$4))::[])) }
 
 let_rec_def:
 | ident nonempty_list(simple_pat) EQ expr
-    { (Pvar $1,Efunction(($2,$4)::[])) }
+    { (Pvar $1,Efunction((Pparams $2,$4)::[])) }
 | ident nonempty_list(simple_pat) COLON ty EQ expr
-    { (Pvar $1,Efunction(($2,Econstraint($6,$4))::[])) }
+    { (Pvar $1,Efunction((Pparams $2,Econstraint($6,$4))::[])) }
 
 pat: 
 | simple_pat
     { $1 }
 | pat AS lid
-    { Pconstraint($1,$3) }
+    { Palias($1,$3) }
 | pat CONS pat
     { Pconstruct("::",Ptuple($1::$3::[])) }
 | UID simple_pat
@@ -164,7 +169,7 @@ comma_pat:
 
 pat_semi_list:
 | pat_semi_list SEMI pat 
-  { Pconstruct("::",Ptuple($1::$2::[])) }
+  { Pconstruct("::",Ptuple($1::$3::[])) }
 | pat
   { Pconstruct("::",Ptuple($1::(Pconstruct_ "[]")::[])) }
 
@@ -268,7 +273,7 @@ ident:
 
 param:
 | QUOTE lid
-   { {id=$2; level=ref 0} }
+   { {id=Idstr $2; level= 0} }
 
 
 params:
@@ -285,7 +290,7 @@ ty_def:
 | params tyname EQ nonempty_list(BAR sum_case { $2 })
     { Dvariant($2,$1,$4) }
 | params tyname EQ ty
-    { $1 }
+    { Dabbrev($2,$1,$4) }
 
 ty: 
 | simple_ty
@@ -307,9 +312,9 @@ simple_ty:
 | tyname
     { Tconstr($1,[]) }
 | param
-    { Tvar $1 }
+    { Tvar (ref (Unbound $1)) }
 | LPAREN ty RPAREN
-    { $1 }
+    { $2 }
 
 sum_case:
 | UID

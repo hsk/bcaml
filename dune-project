@@ -1,6 +1,6 @@
 (lang dune 3.7)
-
-(name bcaml)
+(using menhir 2.1)
+(name block)
 
 (generate_opam_files true)
 
@@ -16,7 +16,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name bcaml)
+ (name block)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune)
