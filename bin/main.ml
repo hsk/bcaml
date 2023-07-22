@@ -14,5 +14,6 @@ let () =
     let ast = Parser.top Lexer.token filebuf in
     print_endline (show_def_list ast)
   with
+  | Failure msg -> print_endline msg
   | _ -> print_endline "something went wrong"
 

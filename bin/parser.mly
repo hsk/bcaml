@@ -64,20 +64,20 @@
 
 
 top:
-| def EOF
-    { [(gen_id (), $1)] }
+| def SEMISEMI EOF
+    { [$1] }
 | def SEMISEMI top
-    { (gen_id (), $1)::$3 }
+    { $1::$3 }
 
 def: 
 | TYPE separated_nonempty_list(AND, ty_def)
-    { Deftype $2 }
+    { (gen_id (), Deftype $2) }
 | LET separated_nonempty_list(AND, let_def)
-    { Deflet $2 }
+    { (gen_id (), Deflet $2) }
 | LET REC separated_nonempty_list(AND, let_rec_def)
-    { Defletrec $3 }
+    { (gen_id (), Defletrec $3) }
 | expr
-    { Defexpr $1 }
+    { (gen_id (), Defexpr $1) }
 
 expr:
 | simple_expr { $1 }
