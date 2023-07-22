@@ -58,3 +58,37 @@ let free_type_vars level ty =
     | _ -> ()
   in free_vars ty;
   !fv
+
+let rec gen_type level ty =
+  let ty = type_repr ty in
+  match ty with
+  | Tvar link ->
+    begin match link with
+    | {contents=Unbound{id=id;level=level'}} 
+      when level' > level ->
+      link := (Unbound {id=id;level=generic})
+    | {contents=Linkto ty} -> gen_type level ty
+    | _ -> ()
+    end
+  | Tlist ty | Tref ty -> gen_type level ty
+  | Tarrow(arg,ret) -> gen_type level arg; gen_type level ret
+  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
+    List.iter (gen_type level) tyl
+  | _ -> ()
+
+let rec nongen_type level ty =
+  let ty = type_repr ty in
+  match ty with
+  | Tvar link ->
+    begin match link with
+    | {contents=Unbound{id=id;level=level'}} 
+      when level' > level ->
+      link := (Unbound {id=id;level=level})
+    | {contents=Linkto ty} -> nongen_type level ty
+    | _ -> ()
+    end
+  | Tlist ty | Tref ty -> nongen_type level ty
+  | Tarrow(arg,ret) -> nongen_type level arg; nongen_type level ret
+  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
+    List.iter (nongen_type level) tyl
+  | _ -> ()
