@@ -10,9 +10,10 @@ let gen_id () =
 let rec type_repr ty =
   match ty with
   | Tvar {contents=Unbound _} -> ty
-  | Tvar {contents=Linkto t1 } ->
+  | Tvar ({contents=Linkto t1} as link) ->
     let t2 = type_repr t1 in
-    Tvar {contents=Linkto t2 } 
+    link := Linkto t2;
+    t2 
   | _ -> ty
 
 let new_type_var level =
@@ -30,6 +31,7 @@ let rec get_type_level level ty =
     level
   | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
     get_type_level_list notgeneric tyl 
+  | Ttag -> level
 
 and get_type_level_list level = function
 | [] -> failwith "get_type_level_list"

@@ -41,6 +41,7 @@ and ty =
 | Tconstr of string * ty list
 | Trecord of string * ty list
 | Tvariant of string * ty list
+| Ttag
 [@@deriving show]
 
 and expr =
@@ -80,15 +81,11 @@ and pat =
 [@@deriving show]
 
 type type_decl =
-| Drecord of string * tyvar list * (string * ty) list
-| Dvariant of string * tyvar list * tag list
-| Dabbrev of string * tyvar list * ty
+| Drecord of string * ty list * (string * ty) list
+| Dvariant of string * ty list * (string * ty) list
+| Dabbrev of string * ty list * ty
 [@@deriving show]
 
-and tag =
-| Gconstruct_ of string
-| Gconstruct of string * ty
-[@@deriving show]
 
 and def_item =
 | Defexpr of expr

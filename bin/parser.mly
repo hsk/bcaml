@@ -294,7 +294,7 @@ ident:
 
 param:
 | QUOTE lid
-   { {id=Idstr $2; level= 0} }
+   { Tvar (ref (Unbound {id=Idstr $2; level= 0})) }
 
 
 params:
@@ -333,15 +333,15 @@ simple_ty:
 | tyname
     { Tconstr($1,[]) }
 | param
-    { Tvar (ref (Unbound $1)) }
+    { $1 }
 | LPAREN ty RPAREN
     { $2 }
 
 sum_case:
 | UID
-    { Gconstruct_ $1 }
+    { ($1, Ttag) }
 | UID OF ty
-    { Gconstruct($1,$3) }
+    { ($1, $3) }
 
 
 %%
