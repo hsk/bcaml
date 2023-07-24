@@ -39,8 +39,8 @@ and ty =
 | Tarrow of ty * ty
 | Ttuple of ty list
 | Tconstr of string * ty list
-| Trecord of string * ty list
-| Tvariant of string * ty list
+| Trecord of string * ty list * (string * ty) list
+| Tvariant of string * ty list * (string * ty) list
 | Ttag
 [@@deriving show]
 

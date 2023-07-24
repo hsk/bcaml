@@ -27,9 +27,9 @@ let rec get_type_level level ty =
   | Tunit | Tbool | Tint | Tfloat | Tchar |Tstring -> level
   | Tlist ty | Tref ty -> get_type_level level ty
   | Tarrow(arg,ret) -> min (get_type_level notgeneric arg) (get_type_level notgeneric ret)
-  | Ttuple [] | Tconstr(_,[]) | Trecord(_,[]) | Tvariant(_,[]) ->
+  | Ttuple [] | Tconstr(_,[]) | Trecord(_,[],_) | Tvariant(_,[],_) ->
     level
-  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
+  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) ->
     get_type_level_list notgeneric tyl 
   | Ttag -> level
 
@@ -51,7 +51,7 @@ let free_type_vars level ty =
       if get_type_level generic ty >= level then fv := ty :: !fv
     | Tlist ty | Tref ty -> free_vars ty
     | Tarrow(arg,ret) -> free_vars arg; free_vars ret
-    | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
+    | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) ->
       List.iter free_vars tyl
     | _ -> ()
   in free_vars ty;
@@ -64,7 +64,8 @@ let rec generalize level ty =
     begin match link with
     | {contents=Unbound{id=id;level=level'}} 
       when level' > level ->
-       Tvar (ref (Unbound {id=id;level=generic}))
+      link := (Unbound {id=id;level=generic});
+      ty
     | {contents=Linkto ty} -> generalize level ty
     | _ -> ty
     end
@@ -73,8 +74,8 @@ let rec generalize level ty =
   | Tarrow(arg,ret) -> Tarrow(generalize level arg, generalize level ret)
   | Ttuple tyl -> Ttuple(List.map (generalize level) tyl)
   | Tconstr(name,tyl) -> Tconstr(name,List.map (generalize level) tyl)
-  | Trecord(name,tyl) -> Tvariant(name,List.map (generalize level) tyl)
-  | Tvariant(name,tyl) -> Tvariant(name,List.map (generalize level) tyl)
+  | Trecord(name,tyl,elem) -> Tvariant(name,List.map (generalize level) tyl,elem)
+  | Tvariant(name,tyl,elem) -> Tvariant(name,List.map (generalize level) tyl,elem)
   | _ -> ty
 
 let instantiate level ty =
@@ -103,8 +104,8 @@ let instantiate level ty =
       when ty_lv = generic -> Tarrow(f arg, f ret)
     | Ttuple tyl when ty_lv = generic -> Ttuple(List.map f tyl)
     | Tconstr(name,tyl) when ty_lv = generic -> Tconstr(name,List.map f tyl)
-    | Trecord(name,tyl) when ty_lv = generic -> Trecord(name,List.map f tyl)
-    | Tvariant(name,tyl) when ty_lv = generic -> Tvariant(name,List.map f tyl)
+    | Trecord(name,tyl,elem) when ty_lv = generic -> Trecord(name,List.map f tyl,elem)
+    | Tvariant(name,tyl,elem) when ty_lv = generic -> Tvariant(name,List.map f tyl,elem)
     | _ -> ty
   in f ty
 
@@ -117,7 +118,7 @@ let rec occursin id = function
 | Tlist ty -> occursin id ty
 | Tref ty -> occursin id ty
 | Tarrow(arg,ret) -> occursin id arg || occursin id ret
-| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) -> List.exists (occursin id) tyl
+| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) -> List.exists (occursin id) tyl
 | _ -> false
 
 let rec adjustlevel level = function
@@ -130,5 +131,5 @@ let rec adjustlevel level = function
 | Tlist ty -> adjustlevel level ty
 | Tref ty -> adjustlevel level ty
 | Tarrow(arg,ret) -> adjustlevel level arg; adjustlevel level ret
-| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) -> List.iter (adjustlevel level) tyl
+| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) -> List.iter (adjustlevel level) tyl
 | _ -> ()
