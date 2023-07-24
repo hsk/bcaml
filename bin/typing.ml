@@ -18,29 +18,25 @@ let rec type_repr ty =
 let new_type_var level =
   Tvar (ref (Unbound {id=Idint (gen_id ());level=level}))
 
-let rec new_type_var_list n level =
-  if n <= 0 then []
-  else new_type_var level :: new_type_var_list (n - 1) level
-
-let rec get_type_level ty =
+let rec get_type_level level ty =
   let ty = type_repr ty in
   match ty with
   | Tvar {contents=Unbound{id=_;level=level}} -> level
-  | Tvar {contents=Linkto ty} -> get_type_level ty
-  | Tunit | Tbool | Tint | Tfloat | Tchar |Tstring -> notgeneric
-  | Tlist ty | Tref ty -> get_type_level ty
-  | Tarrow(arg,ret) -> min (get_type_level arg) (get_type_level ret)
+  | Tvar {contents=Linkto ty} -> get_type_level level ty
+  | Tunit | Tbool | Tint | Tfloat | Tchar |Tstring -> level
+  | Tlist ty | Tref ty -> get_type_level level ty
+  | Tarrow(arg,ret) -> min (get_type_level notgeneric arg) (get_type_level notgeneric ret)
   | Ttuple [] | Tconstr(_,[]) | Trecord(_,[]) | Tvariant(_,[]) ->
-    notgeneric
+    level
   | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
-    get_type_level_list tyl 
+    get_type_level_list notgeneric tyl 
 
-and get_type_level_list = function
+and get_type_level_list level = function
 | [] -> failwith "get_type_level_list"
-| [ty] -> get_type_level ty
+| [ty] -> get_type_level level ty
 | ty::rest ->
-  let lv1 = get_type_level ty in
-  let lv2 = get_type_level_list rest in
+  let lv1 = get_type_level level ty in
+  let lv2 = get_type_level_list level rest in
   min lv1 lv2
 
 
@@ -50,7 +46,7 @@ let free_type_vars level ty =
     let ty = type_repr ty in
     match ty with
     | Tvar _ ->
-      if get_type_level ty >= level then fv := ty :: !fv
+      if get_type_level generic ty >= level then fv := ty :: !fv
     | Tlist ty | Tref ty -> free_vars ty
     | Tarrow(arg,ret) -> free_vars arg; free_vars ret
     | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
@@ -59,43 +55,29 @@ let free_type_vars level ty =
   in free_vars ty;
   !fv
 
-let rec gen_type level ty =
+let rec generalize level ty =
   let ty = type_repr ty in
   match ty with
   | Tvar link ->
     begin match link with
     | {contents=Unbound{id=id;level=level'}} 
       when level' > level ->
-      link := (Unbound {id=id;level=generic})
-    | {contents=Linkto ty} -> gen_type level ty
-    | _ -> ()
+       Tvar (ref (Unbound {id=id;level=generic}))
+    | {contents=Linkto ty} -> generalize level ty
+    | _ -> ty
     end
-  | Tlist ty | Tref ty -> gen_type level ty
-  | Tarrow(arg,ret) -> gen_type level arg; gen_type level ret
-  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
-    List.iter (gen_type level) tyl
-  | _ -> ()
+  | Tlist ty -> Tlist (generalize level ty)
+  | Tref ty -> Tref (generalize level ty)
+  | Tarrow(arg,ret) -> Tarrow(generalize level arg, generalize level ret)
+  | Ttuple tyl -> Ttuple(List.map (generalize level) tyl)
+  | Tconstr(name,tyl) -> Tconstr(name,List.map (generalize level) tyl)
+  | Trecord(name,tyl) -> Tvariant(name,List.map (generalize level) tyl)
+  | Tvariant(name,tyl) -> Tvariant(name,List.map (generalize level) tyl)
+  | _ -> ty
 
-let rec nongen_type level ty =
+let instantiate level ty =
   let ty = type_repr ty in
-  match ty with
-  | Tvar link ->
-    begin match link with
-    | {contents=Unbound{id=id;level=level'}} 
-      when level' > level ->
-      link := (Unbound {id=id;level=level})
-    | {contents=Linkto ty} -> nongen_type level ty
-    | _ -> ()
-    end
-  | Tlist ty | Tref ty -> nongen_type level ty
-  | Tarrow(arg,ret) -> nongen_type level arg; nongen_type level ret
-  | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) ->
-    List.iter (nongen_type level) tyl
-  | _ -> ()
-
-let type_instance level ty =
-  let ty = type_repr ty in
-  let ty_lv = get_type_level ty in
+  let ty_lv = get_type_level notgeneric ty in
   let id_var_hash = Hashtbl.create 10 in
   let rec f ty =
     match ty with
@@ -123,3 +105,28 @@ let type_instance level ty =
     | Tvariant(name,tyl) when ty_lv = generic -> Tvariant(name,List.map f tyl)
     | _ -> ty
   in f ty
+
+let rec occursin id = function
+| Tvar link ->
+  begin match link with
+  | {contents=Unbound{id=id';level=_}} -> id = id'
+  | {contents=Linkto ty} -> occursin id ty
+  end
+| Tlist ty -> occursin id ty
+| Tref ty -> occursin id ty
+| Tarrow(arg,ret) -> occursin id arg || occursin id ret
+| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) -> List.exists (occursin id) tyl
+| _ -> false
+
+let rec adjustlevel level = function
+| Tvar link ->
+  begin match link with
+  | {contents=Unbound{id=id';level=level'}} ->
+    if level < level' then link := Unbound{id=id';level=level}
+  | {contents=Linkto ty} -> adjustlevel level ty
+  end
+| Tlist ty -> adjustlevel level ty
+| Tref ty -> adjustlevel level ty
+| Tarrow(arg,ret) -> adjustlevel level arg; adjustlevel level ret
+| Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl) | Tvariant(_,tyl) -> List.iter (adjustlevel level) tyl
+| _ -> ()
