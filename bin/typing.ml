@@ -133,3 +133,40 @@ let rec adjustlevel level = function
 | Tarrow(arg,ret) -> adjustlevel level arg; adjustlevel level ret
 | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) -> List.iter (adjustlevel level) tyl
 | _ -> ()
+
+let new_type_var_subst tyl fields =
+  let new_type_var_list = ref [] in
+  let rec subst id ty = function
+  | [] -> []
+  | (name,Tvar {contents=Unbound{id=id';level=_}})::rest when id=id' ->
+    (name,ty)::subst id ty rest
+  | field::rest ->
+    field::subst id ty rest
+  in
+  let subst_new_type_var fields ty =
+  match ty with
+  | Tvar {contents=Unbound{id=id;level=_}} ->
+    let new_type_var' = new_type_var notgeneric in
+    new_type_var_list := new_type_var' :: !new_type_var_list;
+    subst id new_type_var' fields
+  | _ -> fields
+  in
+  let snd = List.fold_left subst_new_type_var fields tyl in
+  (List.rev !new_type_var_list,snd)
+
+let rec decl_to_ty name curr_num = function
+| (num,decl_list)::def_list when num <= curr_num ->
+  let rec iter_decl_list = function
+  | Drecord(n,tyl,fields)::_ when n=name-> 
+    let (tyl,fields) = new_type_var_subst tyl fields in
+    Trecord(n,tyl,fields)
+  | Dvariant(n,tyl,fields)::_ when n=name-> 
+    let (tyl,fields) = new_type_var_subst tyl fields in
+    Tvariant(n,tyl,fields)
+  | _::rest ->
+    iter_decl_list rest
+  | [] ->
+    decl_to_ty name curr_num def_list
+  in iter_decl_list decl_list
+| _::def_list -> decl_to_ty name curr_num def_list
+| [] -> failwith (Printf.sprintf "decl_to_ty %s" name)

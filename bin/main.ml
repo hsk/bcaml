@@ -18,4 +18,4 @@ let () =
   | Parser.Error -> print_endline "parser error"
   | _ -> print_endline "something went wrong"
 
-open Typing
+open Defs
