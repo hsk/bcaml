@@ -134,35 +134,40 @@ let rec adjustlevel level = function
 | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) -> List.iter (adjustlevel level) tyl
 | _ -> ()
 
-let new_type_var_subst tyl fields =
-  let new_type_var_list = ref [] in
-  let rec subst id ty = function
-  | [] -> []
-  | (name,Tvar {contents=Unbound{id=id';level=_}})::rest when id=id' ->
-    (name,ty)::subst id ty rest
-  | field::rest ->
-    field::subst id ty rest
-  in
-  let subst_new_type_var fields ty =
-  match ty with
-  | Tvar {contents=Unbound{id=id;level=_}} ->
-    let new_type_var' = new_type_var notgeneric in
-    new_type_var_list := new_type_var' :: !new_type_var_list;
-    subst id new_type_var' fields
-  | _ -> fields
-  in
-  let snd = List.fold_left subst_new_type_var fields tyl in
-  (List.rev !new_type_var_list,snd)
+let rec subst_ty t id ty =
+  match t with
+  | Tvar {contents=Unbound{id=id';level=_}} when id = id' -> ty
+  | Tvar {contents=Unbound _} -> t
+  | Tvar {contents=Linkto t} -> subst_ty t id ty
+  | Tlist t -> Tlist (subst_ty t id ty)
+  | Tref t -> Tref (subst_ty t id ty)
+  | Tarrow(arg,ret) -> Tarrow(subst_ty arg id ty, subst_ty ret id ty)
+  | Ttuple tyl -> Ttuple(subst_ty_to_tyl tyl id ty)
+  | Tconstr(name,tyl) -> Tconstr(name,subst_ty_to_tyl tyl id ty)
+  | Trecord(name,tyl,fields) ->
+    Trecord(name,subst_ty_to_tyl tyl id ty,subst_ty_to_fields fields id ty)
+  | Tvariant(name,tyl,fields) -> 
+    Tvariant(name,subst_ty_to_tyl tyl id ty,subst_ty_to_fields fields id ty)
+  | _ -> t
+
+and subst_ty_to_tyl tyl id ty =
+  List.map (fun t -> subst_ty t id ty) tyl
+
+and subst_ty_to_fields fields id ty =
+  List.map (fun (s,t) -> (s,subst_ty t id ty)) fields
 
 let rec decl_to_ty name curr_num = function
 | (num,decl_list)::def_list when num <= curr_num ->
   let rec iter_decl_list = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
-    let (tyl,fields) = new_type_var_subst tyl fields in
-    Trecord(n,tyl,fields)
+    let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
+    (tyl,Trecord(n,tyl,fields))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
-    let (tyl,fields) = new_type_var_subst tyl fields in
-    Tvariant(n,tyl,fields)
+    let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
+    (tyl,Tvariant(n,tyl,fields))
+  | Dabbrev(n,tyl,ty)::_ when n=name-> 
+    let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
+    (tyl,ty)
   | _::rest ->
     iter_decl_list rest
   | [] ->
@@ -170,3 +175,32 @@ let rec decl_to_ty name curr_num = function
   in iter_decl_list decl_list
 | _::def_list -> decl_to_ty name curr_num def_list
 | [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
+
+and tyl_to_idl tyl =
+  match tyl with
+  | Tvar {contents=Unbound{id=id;level=_}}::tyl ->
+    id::tyl_to_idl tyl
+  | [] -> []
+  | _ -> failwith "tyl_to_idl"
+
+and fold_idl_for_fields fields idl=
+  let new_type_vars = ref [] in
+  let snd = List.fold_left 
+  (
+    fun fields id -> 
+      let ty = new_type_var notgeneric in
+      new_type_vars := !new_type_vars @ [ty];
+      subst_ty_to_fields fields id ty
+  ) fields idl in
+  (!new_type_vars,snd)
+
+and fold_idl_for_ty ty idl=
+  let new_type_vars = ref [] in
+  let snd = List.fold_left 
+  (
+    fun t id -> 
+      let ty = new_type_var notgeneric in
+      new_type_vars := !new_type_vars @ [ty];
+      subst_ty t id ty
+  ) ty idl in
+  (!new_type_vars,snd)

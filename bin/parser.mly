@@ -63,23 +63,20 @@
 
 %%
 
-
 top:
-| def SEMISEMI EOF
-    { [$1] }
-| def SEMISEMI top
-    { $1::$3 }
+| list(def) EOF
+  { $1 }
+
 
 def: 
-| TYPE separated_nonempty_list(AND, ty_def)
+| TYPE separated_nonempty_list(AND, ty_def) SEMISEMI
     { (gen_id (), Deftype $2) }
-| LET separated_nonempty_list(AND, let_def)
+| LET separated_nonempty_list(AND, let_def) SEMISEMI
     { (gen_id (), Deflet $2) }
-| LET REC separated_nonempty_list(AND, let_rec_def)
+| LET REC separated_nonempty_list(AND, let_rec_def) SEMISEMI
     { (gen_id (), Defletrec $3) }
-| expr
+| expr SEMISEMI
     { (gen_id (), Defexpr $1) }
-
 expr:
 | simple_expr { $1 }
 | simple_expr_ simple_expr+ { Eapply($1,$2) }

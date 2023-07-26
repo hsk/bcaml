@@ -47,7 +47,6 @@ rule token = parse
 | float               { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
 | "'" ([^ '\\' '\''] as c) "'"  { CHAR c }
 | "'" '\\' (['\\' '\'' 'n' 't' 'b' 'r'] as c) "'" { CHAR ((escaped_conv c).[0]) }
-| "'" [^ '\'']* ("'" | eof) { failwith "lexer char error" }
 | '"'                 { STRING (string "" lexbuf) }
 | "(" { LPAREN }
 | ")" { RPAREN }
