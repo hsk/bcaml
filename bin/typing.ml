@@ -134,6 +134,30 @@ let rec adjustlevel level = function
 | Ttuple tyl | Tconstr(_,tyl) | Trecord(_,tyl,_) | Tvariant(_,tyl,_) -> List.iter (adjustlevel level) tyl
 | _ -> ()
 
+let rec unify ty1 ty2 = 
+  match ty1, ty2 with
+  | Tvar ({contents=Unbound{id=id;level=level}} as link), ty 
+  | ty, Tvar ({contents=Unbound{id=id;level=level}} as link) ->
+    if occursin id ty then failwith "unify error due to ocurr check";
+    adjustlevel level ty;
+    link := Linkto ty
+  | Tvar {contents=Linkto t1}, t2
+  | t1, Tvar {contents=Linkto t2} -> unify t1 t2
+  | Tlist t1, Tlist t2 -> unify t1 t2
+  | Tref t1, Tref t2 -> unify t1 t2
+  | Tarrow(arg1,ret1), Tarrow(arg2,ret2) -> unify arg1 arg2; unify ret1 ret2
+  | Ttuple tyl1, Ttuple tyl2 -> unify_list tyl1 tyl2
+  | Tconstr(name1,tyl1), Tconstr(name2,tyl2) when name1 = name2 ->
+    unify_list tyl1 tyl2
+  | Trecord(name1,_,fields1), Trecord(name2,_,fields2) when name1 = name2 ->
+    unify_list (List.map snd fields1) (List.map snd fields2)
+  | Tvariant(name1,_,fields1), Tvariant(name2,_,fields2) when name1 = name2 -> 
+    unify_list (List.map snd fields1) (List.map snd fields2)
+  | ty1,ty2 when ty1 = ty2 -> ()
+  | _ -> failwith "Cannot unify types" 
+and unify_list tyl1 tyl2 =
+  List.iter2 unify tyl1 tyl2
+
 let rec subst_ty t id ty =
   match t with
   | Tvar {contents=Unbound{id=id';level=_}} when id = id' -> ty
