@@ -1,4 +1,5 @@
 open Syntax
+open Globals
 
 let curr_id = ref 0
 
@@ -180,9 +181,8 @@ and subst_ty_to_tyl tyl id ty =
 and subst_ty_to_fields fields id ty =
   List.map (fun (s,t) -> (s,subst_ty t id ty)) fields
 
-let rec decl_to_ty name curr_num = function
-| (num,decl_list)::def_list when num <= curr_num ->
-  let rec iter_decl_list = function
+let decl_to_ty name =
+  let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
     (tyl,Trecord(n,tyl,fields))
@@ -193,38 +193,49 @@ let rec decl_to_ty name curr_num = function
     let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
     (tyl,ty)
   | _::rest ->
-    iter_decl_list rest
-  | [] ->
-    decl_to_ty name curr_num def_list
-  in iter_decl_list decl_list
-| _::def_list -> decl_to_ty name curr_num def_list
-| [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
+    aux rest
+  | [] -> failwith "decl_to_ty"
 
-and tyl_to_idl tyl =
-  match tyl with
-  | Tvar {contents=Unbound{id=id;level=_}}::tyl ->
-    id::tyl_to_idl tyl
-  | [] -> []
-  | _ -> failwith "tyl_to_idl"
+  and tyl_to_idl tyl =
+    match tyl with
+    | Tvar {contents=Unbound{id=id;level=_}}::tyl ->
+      id::tyl_to_idl tyl
+    | [] -> []
+    | _ -> failwith "tyl_to_idl"
 
-and fold_idl_for_fields fields idl=
-  let new_type_vars = ref [] in
-  let snd = List.fold_left 
-  (
-    fun fields id -> 
-      let ty = new_type_var notgeneric in
-      new_type_vars := !new_type_vars @ [ty];
-      subst_ty_to_fields fields id ty
-  ) fields idl in
-  (!new_type_vars,snd)
+  and fold_idl_for_fields fields idl=
+    let new_type_vars = ref [] in
+    let snd = List.fold_left 
+    (
+      fun fields id -> 
+        let ty = new_type_var notgeneric in
+        new_type_vars := !new_type_vars @ [ty];
+        subst_ty_to_fields fields id ty
+    ) fields idl in
+    (!new_type_vars,snd)
 
-and fold_idl_for_ty ty idl=
-  let new_type_vars = ref [] in
-  let snd = List.fold_left 
-  (
-    fun t id -> 
-      let ty = new_type_var notgeneric in
-      new_type_vars := !new_type_vars @ [ty];
-      subst_ty t id ty
-  ) ty idl in
-  (!new_type_vars,snd)
+  and fold_idl_for_ty ty idl=
+    let new_type_vars = ref [] in
+    let snd = List.fold_left 
+    (
+      fun t id -> 
+        let ty = new_type_var notgeneric in
+        new_type_vars := !new_type_vars @ [ty];
+        subst_ty t id ty
+    ) ty idl in
+    (!new_type_vars,snd)
+
+  in aux !modules.tydecls
+
+let rec convert_constr ty =
+  match ty with 
+  | Tconstr(name,params) ->
+    let (tyl,ty) = decl_to_ty name in
+    if List.length params = List.length tyl then
+      begin
+        unify_list params tyl;
+        convert_constr ty
+      end
+    else
+      failwith "the number of parameters of type constructor doesn't match"
+  | _ -> ty

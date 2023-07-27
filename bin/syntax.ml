@@ -100,3 +100,6 @@ and def = (int * def_item)
 
 and def_list = def list
 [@@deriving show]
+
+type tyenv = (string * ty) list
+[@@deriving show]
