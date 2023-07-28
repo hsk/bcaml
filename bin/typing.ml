@@ -240,17 +240,40 @@ let rec convert_constr ty =
       failwith "the number of parameters of type constructor doesn't match"
   | _ -> ty
 
-  let compare_label name (label1,_) (label2,_) =
-    let rec aux label n = function
-    | x::_ when label = x -> n
-    | _::xs -> aux label (n+1) xs
-    | [] -> failwith "label not found"
-    in
-    let fields =
+let dom_of_fields name =
+  let fields =
     match decl_to_ty name with
     | _,Trecord(_,_,fields) -> fields
     | _ -> failwith "not a record type"
     in
-    let labels = List.map fst fields in
-    let aux label = aux label 0 labels in
-    aux label1 - aux label2
+    List.map fst fields
+
+let compare_label name (label1,_) (label2,_) =
+  let rec aux label n = function
+  | x::_ when label = x -> n
+  | _::xs -> aux label (n + 1) xs
+  | [] -> failwith "label not found"
+  in
+  let labels = dom_of_fields name in
+  let aux label = aux label 0 labels in
+  aux label1 - aux label2
+
+let label_belong_to label =
+  let rec aux = function
+  | Drecord(name,_,fields)::_ when List.mem_assoc label fields -> name
+  | _::rest -> aux rest
+  | _ -> failwith "label_belong_to"
+  in aux !modules.tydecls
+
+let tag_belong_to tag =
+  let rec aux = function
+  | Drecord(name,_,fields)::_ when List.mem_assoc tag fields -> name
+  | _::rest -> aux rest
+  | _ -> failwith "tag_belong_to"
+  in aux !modules.tydecls
+
+let is_valid_record fields =
+  let first_label = fst (List.hd fields) in
+  let record_name = label_belong_to first_label in
+  let fields = List.sort (compare_label record_name) fields in
+  List.map fst fields = dom_of_fields record_name
