@@ -302,20 +302,6 @@ and subst_ty_to_tvar_in_tyl tyl ty =
 and subst_ty_to_tvar_in_fields fields ty =
   List.map (fun (s,t) -> (s,subst_ty_to_tvar t ty)) fields
 
-let validate_record level fields =
-  let first_label = fst (List.hd fields) in
-  let record_name = label_belong_to first_label in
-  let fields = List.sort (compare_label record_name) fields in
-  if List.map fst fields = List.map fst (get_fields record_name) then
-    subst_ty_to_tvar_in_fields fields (new_type_var level)
-  else
-    failwith "invalid record"
-  
-let validate_variant level tag_name =
-  let variant_name = tag_belong_to tag_name in
-  let fields = get_fields variant_name in
-  subst_ty_to_tvar_in_fields fields (new_type_var level)
-
 let rec is_simple = function
 | Evar _ -> true
 | Econstant _ -> true
@@ -337,12 +323,12 @@ let rec is_simple = function
 
 let rec type_patt level new_env pat ty =
   ignore (type_patt,new_env,level,pat,ty);
-  new_env
+  []
 
-let type_pat level pat ty =
+and type_pat level pat ty =
   type_patt level [] pat ty 
 
-let rec type_expr env level = function
+and type_expr env level = function
 | Evar s -> instantiate level (List.assoc s env)
 | Econstant cst -> 
   begin match cst with
@@ -361,9 +347,7 @@ let rec type_expr env level = function
 | Etag -> Ttag
 | Econstruct(tag_name,expr) -> 
   let variant_name = tag_belong_to tag_name in
-  let fields = validate_variant level tag_name in
-  let ty = List.assoc tag_name fields in
-  unify ty (type_expr env level expr);
+  let fields = validate_variant env level (tag_name,expr) in
   Tvariant(variant_name,fields)
 | Eapply(fct,args) -> 
   let fct_ty = type_expr env level fct in
@@ -402,7 +386,7 @@ let rec type_expr env level = function
   | [] -> failwith "empty function"
   | [(Pparams patl,expr)] ->
     let tyl = List.map (fun _ -> new_type_var level) patl in
-    let add_env = List.fold_left2 type_pat env patl tyl in
+    let add_env = List.fold_left2 (type_patt level) env patl tyl in
     let ret_ty = type_expr add_env level expr in
     let ty = List.fold_left (
       fun ret_ty arg_ty -> Tarrow(arg_ty,ret_ty)
@@ -418,11 +402,54 @@ let rec type_expr env level = function
     ) pat_expr;
     Tarrow(arg_ty,ret_ty)
   end
-(*
-| Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
-| Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
-| Econstraint(expr,_) -> is_simple expr
-| Erecord l -> List.for_all is_simple (List.map snd l)
-| Erecord_access(expr,_) -> is_simple expr
-| Ewhen(expr,body) -> is_simple expr && is_simple body
-*)
+| Esequence(expr1,expr2) -> 
+  let ty = type_expr env level expr1 in
+  unify ty Tunit;
+  type_expr env level expr2
+| Econdition(flag,ifso,ifelse) ->
+  let flag = type_expr env level flag in
+  unify flag Tbool;
+  let ty = type_expr env level ifso in
+  unify ty (type_expr env level ifelse);
+  ty
+| Econstraint(expr,expected) -> 
+  let ty = type_expr env level expr in
+  unify ty expected;
+  ty
+| Erecord [] -> failwith "empty record fields"
+| Erecord l ->
+  let first_label = fst (List.hd l) in
+  let record_name = label_belong_to first_label in
+  Trecord(record_name,validate_record env level l)
+
+| Erecord_access(expr,label) ->
+  let ty = type_expr env level expr in
+  let record_name = label_belong_to label in
+  let fields = subst_ty_to_tvar_in_fields (get_fields record_name) (new_type_var level) in
+  unify ty (Trecord(record_name,fields));
+  List.assoc label fields
+| Ewhen(expr,body) -> 
+  let ty = type_expr env level expr in
+  unify ty Tbool;
+  type_expr env level body
+
+and validate_record env level fields =
+  let first_label = fst (List.hd fields) in
+  let record_name = label_belong_to first_label in
+  let fields1 = List.sort (compare_label record_name) fields in
+  let fields2 = subst_ty_to_tvar_in_fields (get_fields record_name) (new_type_var level) in
+  if List.map fst fields1 = List.map fst fields2 then
+    begin
+      unify_list (List.map (type_expr env level) (List.map snd fields1)) (List.map snd fields2);
+      fields2
+    end
+  else
+    failwith "invalid record"
+  
+and validate_variant env level (tag_name,expr) =
+  let variant_name = tag_belong_to tag_name in
+  let fields = get_fields variant_name in
+  let fields = subst_ty_to_tvar_in_fields fields (new_type_var level) in
+  let ty = List.assoc tag_name fields in
+  unify ty (type_expr env level expr);
+  fields
