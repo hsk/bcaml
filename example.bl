@@ -10,3 +10,5 @@ let apply f = function
 type ('a,'b) x = 
 | X of int
 ;;
+
+type a = b and b = a;;
