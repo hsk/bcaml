@@ -75,19 +75,18 @@ let rec generalize level ty =
     begin match link with
     | {contents=Unbound{id=id;level=level'}} 
       when level' > level ->
-      link := (Unbound {id=id;level=generic});
-      ty
+      link := (Unbound {id=id;level=generic})
     | {contents=Linkto ty} -> generalize level ty
-    | _ -> ty
+    | _ -> ()
     end
-  | Tlist ty -> Tlist (generalize level ty)
-  | Tref ty -> Tref (generalize level ty)
-  | Tarrow(arg,ret) -> Tarrow(generalize level arg, generalize level ret)
-  | Ttuple tyl -> Ttuple(List.map (generalize level) tyl)
-  | Tconstr(name,tyl) -> Tconstr(name,List.map (generalize level) tyl)
-  | Trecord(name,fields) -> Tvariant(name,List.map (fun (n,ty) -> (n,generalize level ty)) fields)
-  | Tvariant(name,fields) -> Tvariant(name,List.map (fun (n,ty) -> (n,generalize level ty)) fields)
-  | _ -> ty
+  | Tlist ty -> generalize level ty
+  | Tref ty -> generalize level ty
+  | Tarrow(arg,ret) -> generalize level arg; generalize level ret
+  | Ttuple tyl -> List.iter (generalize level) tyl
+  | Tconstr(_,tyl) -> List.iter (generalize level) tyl
+  | Trecord(_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
+  | Tvariant(_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
+  | _ -> ()
 
 let instantiate level ty =
   let ty = type_repr ty in
@@ -250,13 +249,13 @@ let rec convert_constr ty =
       failwith "the number of parameters of type constructor doesn't match"
   | _ -> ty
 
-let dom_of_fields name =
+let get_fields name =
   let fields =
     match decl_to_ty name with
     | _,Trecord(_,fields) -> fields
-    | _ -> failwith "not a record type"
-    in
-    List.map fst fields
+    | _,Tvariant(_,fields) -> fields
+    | _ -> failwith "not a record or variant type"
+    in fields
 
 let compare_label name (label1,_) (label2,_) =
   let rec aux label n = function
@@ -264,7 +263,7 @@ let compare_label name (label1,_) (label2,_) =
   | _::xs -> aux label (n + 1) xs
   | [] -> failwith "label not found"
   in
-  let labels = dom_of_fields name in
+  let labels = List.map fst (get_fields name) in
   let aux label = aux label 0 labels in
   aux label1 - aux label2
 
@@ -277,7 +276,7 @@ let label_belong_to label =
 
 let tag_belong_to tag =
   let rec aux = function
-  | Drecord(name,_,fields)::_ when List.mem_assoc tag fields -> name
+  | Dvariant(name,_,fields)::_ when List.mem_assoc tag fields -> name
   | _::rest -> aux rest
   | _ -> failwith "tag_belong_to"
   in aux !modules.tydecls
@@ -286,8 +285,12 @@ let validate_record fields =
   let first_label = fst (List.hd fields) in
   let record_name = label_belong_to first_label in
   let fields = List.sort (compare_label record_name) fields in
-  if List.map fst fields = dom_of_fields record_name then
+  if List.map fst fields = List.map fst (get_fields record_name) then
     fields
   else
     failwith "invalid record"
   
+let validate_variant tag =
+  let variant_name = tag_belong_to tag in
+  let fields = get_fields variant_name in
+  fields
