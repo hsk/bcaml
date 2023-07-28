@@ -247,6 +247,14 @@ let rec convert_constr ty =
       end
     else
       failwith "the number of parameters of type constructor doesn't match"
+  | Tlist t -> Tlist (convert_constr t)
+  | Tref t -> Tref (convert_constr t)
+  | Tarrow(arg,ret) -> Tarrow(convert_constr arg, convert_constr ret)
+  | Ttuple tyl -> Ttuple(List.map convert_constr tyl)
+  | Trecord(name,fields) ->
+    Trecord(name,List.map (fun(n,t) -> (n,convert_constr t)) fields)
+  | Tvariant(name,fields) -> 
+    Tvariant(name,List.map (fun(n,t) -> (n,convert_constr t)) fields)
   | _ -> ty
 
 let get_fields name =
@@ -367,7 +375,7 @@ let rec type_patt level new_env pat ty =
       failwith "invalid or pattern"
   | Pconstraint(pat,expected) ->
     let new_env = type_patt level new_env pat ty in
-    unify ty expected;
+    unify ty (subst_ty_to_tvar (convert_constr expected) (new_type_var level));
     new_env
   | Precord fields ->
     validate_record_pat new_env level fields ty
@@ -482,7 +490,7 @@ and type_expr env level = function
   ty
 | Econstraint(expr,expected) -> 
   let ty = type_expr env level expr in
-  unify ty expected;
+  unify ty (subst_ty_to_tvar (convert_constr expected) (new_type_var level));
   ty
 | Erecord [] -> failwith "empty record fields"
 | Erecord l ->
@@ -521,3 +529,27 @@ and validate_variant_expr env level (tag_name,expr) =
   let ty = List.assoc tag_name fields in
   unify ty (type_expr env level expr);
   fields
+
+let type_let env pat_expr =
+  let level = 1 in
+  let patl = List.map (fun (pat,_) -> pat) pat_expr in
+  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
+  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  List.iter2 (
+    fun ty (_,expr) -> 
+      unify ty (type_expr env (level+1) expr);
+      if is_simple expr then generalize level ty
+    ) tyl pat_expr;
+  add_env
+
+let type_letrec env pat_expr =
+  let level = 1 in
+  let patl = List.map (fun (pat,_) -> pat) pat_expr in
+  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
+  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  List.iter2 (
+    fun ty (_,expr) -> 
+      unify ty (type_expr (add_env@env) (level+1) expr);
+      if is_simple expr then generalize level ty
+    ) tyl pat_expr;
+  add_env
