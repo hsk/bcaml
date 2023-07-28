@@ -49,7 +49,6 @@ and expr =
 | Econstant of constant
 | Ebuildin of buildin
 | Etuple of expr list
-| Elist of expr list
 | Etag
 | Econstruct of string * expr
 | Eapply of expr * expr list
@@ -60,7 +59,6 @@ and expr =
 | Esequence of expr * expr
 | Econdition of expr * expr * expr
 | Econstraint of expr * ty
-| Eassign of string * expr
 | Erecord of (string * expr) list
 | Erecord_access of expr * string
 | Ewhen of expr * expr

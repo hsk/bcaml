@@ -281,16 +281,56 @@ let tag_belong_to tag =
   | _ -> failwith "tag_belong_to"
   in aux !modules.tydecls
 
-let validate_record fields =
+let rec subst_ty_to_tvar t ty =
+  match t with
+  | Tvar {contents=Unbound{id=_;level=_}} -> ty
+  | Tvar {contents=Linkto t} -> subst_ty_to_tvar t ty
+  | Tlist t -> Tlist (subst_ty_to_tvar t ty)
+  | Tref t -> Tref (subst_ty_to_tvar t ty)
+  | Tarrow(arg,ret) -> Tarrow(subst_ty_to_tvar arg ty, subst_ty_to_tvar ret ty)
+  | Ttuple tyl -> Ttuple(subst_ty_to_tvar_in_tyl tyl ty)
+  | Tconstr(name,tyl) -> Tconstr(name,subst_ty_to_tvar_in_tyl tyl ty)
+  | Trecord(name,fields) ->
+    Trecord(name,subst_ty_to_tvar_in_fields fields ty)
+  | Tvariant(name,fields) -> 
+    Tvariant(name,subst_ty_to_tvar_in_fields fields  ty)
+  | _ -> t
+
+and subst_ty_to_tvar_in_tyl tyl ty =
+  List.map (fun t -> subst_ty_to_tvar t ty) tyl
+
+and subst_ty_to_tvar_in_fields fields ty =
+  List.map (fun (s,t) -> (s,subst_ty_to_tvar t ty)) fields
+
+let validate_record level fields =
   let first_label = fst (List.hd fields) in
   let record_name = label_belong_to first_label in
   let fields = List.sort (compare_label record_name) fields in
   if List.map fst fields = List.map fst (get_fields record_name) then
-    fields
+    subst_ty_to_tvar_in_fields fields (new_type_var level)
   else
     failwith "invalid record"
   
-let validate_variant tag =
-  let variant_name = tag_belong_to tag in
+let validate_variant level tag_name =
+  let variant_name = tag_belong_to tag_name in
   let fields = get_fields variant_name in
-  fields
+  subst_ty_to_tvar_in_fields fields (new_type_var level)
+
+let rec is_simple = function
+| Evar _ -> true
+| Econstant _ -> true
+| Ebuildin _ -> false
+| Etuple l -> List.for_all is_simple l
+| Etag -> true
+| Econstruct(_,expr) -> is_simple expr
+| Eapply _ -> false
+| Elet(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
+| Eletrec(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
+| Efunction l -> List.for_all is_simple (List.map snd l)
+| Etrywith(body, l) -> is_simple body && List.for_all is_simple (List.map snd l)
+| Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
+| Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
+| Econstraint(expr,_) -> is_simple expr
+| Erecord l -> List.for_all is_simple (List.map snd l)
+| Erecord_access(expr,_) -> is_simple expr
+| Ewhen(expr,body) -> is_simple expr && is_simple body
