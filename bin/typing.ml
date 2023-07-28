@@ -20,24 +20,32 @@ let rec type_repr ty =
 let new_type_var level =
   Tvar (ref (Unbound {id=Idint (gen_id ());level=level}))
 
-let rec get_type_level level ty =
+
+let min lhs rhs =
+  match lhs,rhs with
+  | Some l, Some r -> Some(min l r)
+  | Some l, None -> Some l
+  | None, Some r -> Some r
+  | None, None -> None
+
+let rec get_type_level ty =
   let ty = type_repr ty in
   match ty with
-  | Tvar {contents=Unbound{id=_;level=level}} -> level
-  | Tvar {contents=Linkto ty} -> get_type_level level ty
-  | Tunit | Tbool | Tint | Tfloat | Tchar |Tstring -> level
-  | Tlist ty | Tref ty -> get_type_level level ty
-  | Tarrow(arg,ret) -> min (get_type_level notgeneric arg) (get_type_level notgeneric ret)
-  | Ttuple tyl | Tconstr(_,tyl) -> get_type_level_list notgeneric tyl
-  | Trecord(_,fields) | Tvariant(_,fields) -> get_type_level_list notgeneric (List.map snd fields)
-  | Ttag -> level
+  | Tvar {contents=Unbound{id=_;level=level}} -> Some level
+  | Tvar {contents=Linkto ty} -> get_type_level ty
+  | Tunit | Tbool | Tint | Tfloat | Tchar |Tstring -> None
+  | Tlist ty | Tref ty -> get_type_level ty
+  | Tarrow(arg,ret) -> min (get_type_level arg) (get_type_level ret)
+  | Ttuple tyl | Tconstr(_,tyl) -> get_type_level_list tyl
+  | Trecord(_,fields) | Tvariant(_,fields) -> get_type_level_list (List.map snd fields)
+  | Ttag -> None
 
-and get_type_level_list level = function
-| [] -> failwith "get_type_level_list"
-| [ty] -> get_type_level level ty
+and get_type_level_list = function
+| [] -> None
+| [ty] -> get_type_level ty
 | ty::rest ->
-  let lv1 = get_type_level level ty in
-  let lv2 = get_type_level_list level rest in
+  let lv1 = get_type_level ty in
+  let lv2 = get_type_level_list rest in
   min lv1 lv2
 
 
@@ -47,7 +55,10 @@ let free_type_vars level ty =
     let ty = type_repr ty in
     match ty with
     | Tvar _ ->
-      if get_type_level generic ty >= level then fv := ty :: !fv
+      begin match get_type_level ty with
+      | Some level' when level' >= level -> fv := ty :: !fv
+      | _ -> ()
+      end
     | Tlist ty | Tref ty -> free_vars ty
     | Tarrow(arg,ret) -> free_vars arg; free_vars ret
     | Ttuple tyl | Tconstr(_,tyl) -> List.iter free_vars tyl
