@@ -321,16 +321,108 @@ let rec is_simple = function
 | Econstant _ -> true
 | Ebuildin _ -> false
 | Etuple l -> List.for_all is_simple l
+| Elist _ -> true
 | Etag -> true
 | Econstruct(_,expr) -> is_simple expr
 | Eapply _ -> false
 | Elet(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
 | Eletrec(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
 | Efunction l -> List.for_all is_simple (List.map snd l)
-| Etrywith(body, l) -> is_simple body && List.for_all is_simple (List.map snd l)
 | Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
 | Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
 | Econstraint(expr,_) -> is_simple expr
 | Erecord l -> List.for_all is_simple (List.map snd l)
 | Erecord_access(expr,_) -> is_simple expr
 | Ewhen(expr,body) -> is_simple expr && is_simple body
+
+let rec type_patt level new_env pat ty =
+  ignore (type_patt,new_env,level,pat,ty);
+  new_env
+
+let type_pat level pat ty =
+  type_patt level [] pat ty 
+
+let rec type_expr env level = function
+| Evar s -> instantiate level (List.assoc s env)
+| Econstant cst -> 
+  begin match cst with
+  | Cint _ -> Tint
+  | Cbool _ -> Tbool
+  | Cfloat _ -> Tfloat
+  | Cstring _ -> Tstring
+  | Cchar _ -> Tchar
+  end
+| Ebuildin _ -> Tint
+| Etuple l -> Ttuple(List.map (type_expr env level) l)
+| Elist l -> 
+  let ty = new_type_var level in
+  List.iter (fun expr -> unify ty (type_expr env level expr)) l;
+  Tlist ty
+| Etag -> Ttag
+| Econstruct(tag_name,expr) -> 
+  let variant_name = tag_belong_to tag_name in
+  let fields = validate_variant level tag_name in
+  let ty = List.assoc tag_name fields in
+  unify ty (type_expr env level expr);
+  Tvariant(variant_name,fields)
+| Eapply(fct,args) -> 
+  let fct_ty = type_expr env level fct in
+  let args = List.map (type_expr env level) args in
+  let ty = List.fold_left
+  (
+    fun fct_ty arg_ty ->
+      let param_ty = new_type_var level in
+      let ret_ty = new_type_var level in
+      unify fct_ty (Tarrow(param_ty,ret_ty));
+      unify arg_ty param_ty;
+      ret_ty
+  ) fct_ty args in ty
+| Elet(pat_expr, body) -> 
+  let patl = List.map (fun (pat,_) -> pat) pat_expr in
+  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
+  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  List.iter2 (
+    fun ty (_,expr) -> 
+      unify ty (type_expr env (level+1) expr);
+      if is_simple expr then generalize level ty
+    ) tyl pat_expr;
+  type_expr (add_env@env) level body
+| Eletrec(pat_expr, body) -> 
+  let patl = List.map (fun (pat,_) -> pat) pat_expr in
+  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
+  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  List.iter2 (
+    fun ty (_,expr) -> 
+      unify ty (type_expr (add_env@env) (level+1) expr);
+      if is_simple expr then generalize level ty
+    ) tyl pat_expr;
+  type_expr (add_env@env) level body
+| Efunction l -> 
+  begin match l with
+  | [] -> failwith "empty function"
+  | [(Pparams patl,expr)] ->
+    let tyl = List.map (fun _ -> new_type_var level) patl in
+    let add_env = List.fold_left2 type_pat env patl tyl in
+    let ret_ty = type_expr add_env level expr in
+    let ty = List.fold_left (
+      fun ret_ty arg_ty -> Tarrow(arg_ty,ret_ty)
+    ) ret_ty (List.rev tyl) in ty
+  | pat_expr ->
+    let arg_ty = new_type_var level in
+    let ret_ty = new_type_var level in
+    List.iter (
+      fun (pat,expr) ->
+      let add_env = type_pat level pat arg_ty in
+      let ty = type_expr (add_env@env) level expr in
+      unify ty ret_ty
+    ) pat_expr;
+    Tarrow(arg_ty,ret_ty)
+  end
+(*
+| Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
+| Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
+| Econstraint(expr,_) -> is_simple expr
+| Erecord l -> List.for_all is_simple (List.map snd l)
+| Erecord_access(expr,_) -> is_simple expr
+| Ewhen(expr,body) -> is_simple expr && is_simple body
+*)

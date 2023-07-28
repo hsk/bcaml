@@ -49,13 +49,13 @@ and expr =
 | Econstant of constant
 | Ebuildin of buildin
 | Etuple of expr list
+| Elist of expr list
 | Etag
 | Econstruct of string * expr
 | Eapply of expr * expr list
 | Elet of (pat * expr) list * expr
 | Eletrec of (pat * expr) list * expr
 | Efunction of (pat * expr) list
-| Etrywith of expr * (pat * expr) list
 | Esequence of expr * expr
 | Econdition of expr * expr * expr
 | Econstraint of expr * ty
@@ -90,7 +90,6 @@ and def_item =
 | Deflet of (pat * expr) list
 | Defletrec of (pat * expr) list
 | Deftype of type_decl list
-| Defexc of string * ty option
 [@@deriving show]
 
 and def = (int * def_item)
