@@ -104,16 +104,16 @@ expr:
 | UID simple_expr { Econstruct($1,$2) }
 
 simple_expr:
-| UID { Etag $1 }
+| UID { Econstruct($1,Etag) }
 | simple_expr_ { $1 }
 
 simple_expr_:
 | ident { Evar $1 }
 | const_expr { Econstant $1 }
-| LBRACK RBRACK { Etag "[]" }
+| LBRACK RBRACK { Econstruct("[]",Etag) }
 | LBRACK expr_semi_list RBRACK { $2 }
 | LBRACE expr_label_list RBRACE { Erecord $2 }
-| LPAREN RPAREN { Etag "()" }
+| LPAREN RPAREN { Econstruct("()",Etag) }
 | LPAREN expr COMMA separated_nonempty_list(COMMA,expr) RPAREN
     { Etuple($2::$4) }
 | LPAREN expr COLON ty RPAREN { Econstraint($2,$4) }
@@ -125,7 +125,7 @@ expr_semi_list:
 | expr_semi_list SEMI expr %prec prec_list 
   { Econstruct("::",Etuple($1::$3::[])) }
 | expr %prec prec_list
-  { Econstruct("::",Etuple($1::(Etag "[]")::[])) }
+  { Econstruct("::",Etuple($1::(Econstruct("[]",Etag))::[])) }
 
 expr_label_list:
 | expr_label_list SEMI field EQ expr %prec prec_list
@@ -189,14 +189,14 @@ pat_semi_list:
 | pat_semi_list SEMI pat 
   { Pconstruct("::",Ptuple($1::$3::[])) }
 | pat
-  { Pconstruct("::",Ptuple($1::(Ptag "[]")::[])) }
+  { Pconstruct("::",Ptuple($1::(Pconstruct("[]",Ptag))::[])) }
 
 
 simple_pat: 
 | ident
     { Pvar $1 }
 | UID
-    { Ptag $1 }
+    { Pconstruct($1,Ptag) }
 | WILD
     { Pwild }
 | const_expr
@@ -206,9 +206,9 @@ simple_pat:
 | LBRACK pat_semi_list RBRACK
     { $2 }
 | LBRACK RBRACK
-    { Ptag "[]" }
+    { Pconstruct("[]",Ptag) }
 | LPAREN RPAREN
-    { Ptag "()" }
+    { Pconstruct("()",Ptag) }
 | LPAREN pat COLON ty RPAREN
     { Pconstraint ($2,$4) }
 | LPAREN pat RPAREN

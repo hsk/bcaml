@@ -239,3 +239,18 @@ let rec convert_constr ty =
     else
       failwith "the number of parameters of type constructor doesn't match"
   | _ -> ty
+
+  let compare_label name (label1,_) (label2,_) =
+    let rec aux label n = function
+    | x::_ when label = x -> n
+    | _::xs -> aux label (n+1) xs
+    | [] -> failwith "label not found"
+    in
+    let fields =
+    match decl_to_ty name with
+    | _,Trecord(_,_,fields) -> fields
+    | _ -> failwith "not a record type"
+    in
+    let labels = List.map fst fields in
+    let aux label = aux label 0 labels in
+    aux label1 - aux label2

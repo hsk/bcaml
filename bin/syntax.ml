@@ -50,7 +50,7 @@ and expr =
 | Ebuildin of buildin
 | Etuple of expr list
 | Elist of expr list
-| Etag of string
+| Etag
 | Econstruct of string * expr
 | Eapply of expr * expr list
 | Elet of (pat * expr) list * expr
@@ -73,7 +73,7 @@ and pat =
 | Palias of pat * string
 | Pconstant of constant
 | Ptuple of pat list
-| Ptag of string
+| Ptag
 | Pconstruct of string * pat
 | Por of pat * pat
 | Pconstraint of pat * ty
