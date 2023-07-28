@@ -350,10 +350,25 @@ let rec type_patt level new_env pat ty =
     new_env
   | Pconstruct(name,pat) -> 
     validate_variant_pat new_env level (name,pat) ty
-  (*
   | Por(pat1,pat2) ->
-  | Pconstraint(pat,ty) ->
-  *)
+    let env1 = type_patt level new_env pat1 ty in
+    let env2 = type_patt level new_env pat2 ty in
+    let is_same_list xl yl =
+      let rec aux xl yl =
+      match xl with
+      | x::xs -> List.mem x yl && aux xs yl
+      | [] -> true
+      in
+      (List.length xl = List.length yl) && aux xl yl
+    in
+    if is_same_list (List.map fst env1) (List.map fst env2) then
+      env1
+    else
+      failwith "invalid or pattern"
+  | Pconstraint(pat,expected) ->
+    let new_env = type_patt level new_env pat ty in
+    unify ty expected;
+    new_env
   | Precord fields ->
     validate_record_pat new_env level fields ty
 
