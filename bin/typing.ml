@@ -190,17 +190,17 @@ and subst_ty_to_tyl tyl id ty =
 and subst_ty_to_fields fields id ty =
   List.map (fun (s,t) -> (s,subst_ty t id ty)) fields
 
-let decl_to_ty name =
+let rec decl_to_ty name =
   let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,Trecord(n,fields))
+    (tyl,convert_constr(Trecord(n,fields)))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,Tvariant(n,fields))
+    (tyl,convert_constr(Tvariant(n,fields)))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
-    (tyl,ty)
+    (tyl,convert_constr ty)
   | _::rest ->
     aux rest
   | [] -> failwith "decl_to_ty"
@@ -236,14 +236,14 @@ let decl_to_ty name =
 
   in aux !modules.tydecls
 
-let rec convert_constr ty =
+and convert_constr ty =
   match ty with 
   | Tconstr(name,params) ->
     let (tyl,ty) = decl_to_ty name in
     if List.length params = List.length tyl then
       begin
         unify_list params tyl;
-        convert_constr ty
+        ty
       end
     else
       failwith "the number of parameters of type constructor doesn't match"
@@ -531,10 +531,10 @@ and validate_variant_expr env level (tag_name,expr) =
   fields
 
 let type_let env pat_expr =
-  let level = 1 in
+  let level = 0 in
   let patl = List.map (fun (pat,_) -> pat) pat_expr in
-  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
-  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  let tyl = List.map (fun (_,_)->new_type_var (level+1)) pat_expr in
+  let add_env = List.fold_left2 (type_patt (level+1)) env patl tyl in
   List.iter2 (
     fun ty (_,expr) -> 
       unify ty (type_expr env (level+1) expr);
@@ -543,10 +543,10 @@ let type_let env pat_expr =
   add_env
 
 let type_letrec env pat_expr =
-  let level = 1 in
+  let level = 0 in
   let patl = List.map (fun (pat,_) -> pat) pat_expr in
-  let tyl = List.map (fun (_,_)->new_type_var level) pat_expr in
-  let add_env = List.fold_left2 (type_patt level) env patl tyl in
+  let tyl = List.map (fun (_,_)->new_type_var (level+1)) pat_expr in
+  let add_env = List.fold_left2 (type_patt (level+1)) env patl tyl in
   List.iter2 (
     fun ty (_,expr) -> 
       unify ty (type_expr (add_env@env) (level+1) expr);
