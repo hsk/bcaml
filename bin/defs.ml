@@ -49,3 +49,36 @@ let check_recursive_abbrev lhs rhs decl =
   | [] ->
     List.exists (fun e -> List.mem e rhs) lhs
   in aux lhs rhs decl
+
+let rec is_def name = function
+| Drecord(name',_,_)::_ when name = name' ->
+  true
+| Dvariant(name',_,_)::_ when name = name' ->
+  true
+| _::rest ->
+  is_def name rest
+| [] ->
+  false
+
+let rec def_found_in_ty decl seen = function
+| Tvar _ -> seen
+| Tlist t -> def_found_in_ty decl seen t
+| Tarrow(arg,ret) -> def_found_in_ty decl (def_found_in_ty decl seen arg) ret
+| Ttuple tyl -> List.fold_left (def_found_in_ty decl) seen tyl
+| Trecord(name,fields) when is_def name decl ->
+    name::List.fold_left (def_found_in_ty decl) seen (List.map snd fields)
+| Tvariant(name,fields) when is_def name decl -> 
+    name::List.fold_left (def_found_in_ty decl) seen (List.map snd fields)
+| _ -> seen
+
+let check_recursive_def lhs rhs decl = 
+  let rec aux lhs rhs = function
+  | Drecord(name,_,fields)::rest ->
+    aux (name::lhs) (List.fold_left (def_found_in_ty decl) rhs (List.map snd fields)) rest
+  | Dvariant(name,_,fields)::rest ->
+    aux (name::lhs) (List.fold_left (def_found_in_ty decl) rhs (List.map snd fields)) rest
+  | _::rest ->
+    aux lhs rhs rest
+  | [] ->
+    List.exists (fun e -> List.mem e rhs) lhs
+  in aux lhs rhs decl
