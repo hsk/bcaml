@@ -33,10 +33,6 @@ let rec abbrev_found_in_ty decl seen = function
 | Tarrow(arg,ret) -> abbrev_found_in_ty decl (abbrev_found_in_ty decl seen arg) ret
 | Ttuple tyl -> List.fold_left (abbrev_found_in_ty decl) seen tyl
 | Tconstr(name,tyl) when is_abbrev name decl -> name::List.fold_left (abbrev_found_in_ty decl) seen tyl
-| Trecord(_,fields) ->
-    List.fold_left (abbrev_found_in_ty decl) seen (List.map snd fields)
-| Tvariant(_,fields) -> 
-    List.fold_left (abbrev_found_in_ty decl) seen (List.map snd fields)
 | _ -> seen
 
 
@@ -47,7 +43,7 @@ let check_recursive_abbrev lhs rhs decl =
   | _::rest ->
     aux lhs rhs rest
   | [] ->
-    List.exists (fun e -> List.mem e rhs) lhs
+    List.for_all (fun e -> List.mem e rhs) lhs
   in aux lhs rhs decl
 
 let rec is_def name = function
@@ -80,5 +76,5 @@ let check_recursive_def lhs rhs decl =
   | _::rest ->
     aux lhs rhs rest
   | [] ->
-    List.exists (fun e -> List.mem e rhs) lhs
+    List.for_all (fun e -> List.mem e rhs) lhs
   in aux lhs rhs decl
