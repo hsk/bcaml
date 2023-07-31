@@ -307,7 +307,7 @@ let rec is_simple = function
 | Eapply _ -> false
 | Elet(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
 | Eletrec(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
-| Efunction l -> List.for_all is_simple (List.map snd l)
+| Efunction _ -> true
 | Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
 | Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
 | Econstraint(expr,_) -> is_simple expr
@@ -410,6 +410,7 @@ and type_expr env level = function
 | Econstruct(tag_name,expr) -> 
   let variant_name = tag_belong_to tag_name in
   let fields = validate_variant_expr env level (tag_name,expr) in
+  (*print_endline (show_tyenv fields);*)
   Tvariant(variant_name,fields)
 | Eapply(fct,args) -> 
   let fct_ty = type_expr env level fct in

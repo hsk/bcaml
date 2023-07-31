@@ -18,3 +18,5 @@ type ('a,'b) x =
 ;;
 
 type a = b and b = int;;
+
+type 'a obj = {data:'a};;
