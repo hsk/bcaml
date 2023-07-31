@@ -85,14 +85,11 @@ type type_decl =
 [@@deriving show]
 
 
-and def_item =
+and def =
 | Defexpr of expr
 | Deflet of (pat * expr) list
 | Defletrec of (pat * expr) list
 | Deftype of type_decl list
-[@@deriving show]
-
-and def = (int * def_item)
 [@@deriving show]
 
 and def_list = def list

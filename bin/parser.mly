@@ -2,12 +2,6 @@
 
   open Syntax
 
-  let curr_id = ref 0
-
-  let gen_id () =
-    let ret = !curr_id in
-    incr curr_id;
-    ret
 
 %}
 
@@ -70,13 +64,13 @@ top:
 
 def: 
 | TYPE separated_nonempty_list(AND, ty_def) SEMISEMI
-    { (gen_id (), Deftype $2) }
+    { Deftype $2 }
 | LET separated_nonempty_list(AND, let_def) SEMISEMI
-    { (gen_id (), Deflet $2) }
+    { Deflet $2 }
 | LET REC separated_nonempty_list(AND, let_rec_def) SEMISEMI
-    { (gen_id (), Defletrec $3) }
+    { Defletrec $3 }
 | expr SEMISEMI
-    { (gen_id (), Defexpr $1) }
+    { Defexpr $1 }
 expr:
 | simple_expr { $1 }
 | simple_expr_ simple_expr+ { Eapply($1,$2) }

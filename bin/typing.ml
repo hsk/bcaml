@@ -203,7 +203,7 @@ let rec decl_to_ty name =
     (tyl,convert_constr ty)
   | _::rest ->
     aux rest
-  | [] -> failwith "decl_to_ty"
+  | [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
 
   and tyl_to_idl tyl =
     match tyl with

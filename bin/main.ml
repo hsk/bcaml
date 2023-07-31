@@ -1,4 +1,5 @@
 open Syntax
+open Defs
 
 let () =
   let argc = Array.length Sys.argv in
@@ -12,10 +13,10 @@ let () =
   let filebuf = Lexing.from_channel inchan in
   try
     let ast = Parser.top Lexer.token filebuf in
+    check_ast ast;
     print_endline (show_def_list ast)
   with
   | Failure msg -> print_endline msg
   | Parser.Error -> print_endline "parser error"
   | _ -> print_endline "something went wrong"
 
-open Defs

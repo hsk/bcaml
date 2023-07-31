@@ -1,5 +1,6 @@
 open Syntax
 open Typing
+open Globals
 
 let rec check_valid_ty tyl = function
 | Tvar {contents=Unbound{id=id;level=_}} -> List.exists (occursin id) tyl
@@ -139,3 +140,18 @@ let check_recursive_def decl =
   | [] ->
     ()
   in aux decl
+
+let rec check_ast = function
+| Deftype decl::rest ->
+  push_tydecl decl;
+  check_recursive_abbrev decl;
+  check_recursive_def decl;
+  check_ast rest
+| Defexpr expr::rest ->
+  let ty = type_expr (get_tyenv ()) 0 expr in
+  print_endline (show_ty ty);
+  check_ast rest
+| _::rest ->
+  check_ast rest
+| [] ->
+  ()
