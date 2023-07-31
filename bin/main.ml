@@ -1,4 +1,4 @@
-open Syntax
+(*open Syntax*)
 open Defs
 
 let () =
@@ -14,7 +14,7 @@ let () =
   try
     let ast = Parser.top Lexer.token filebuf in
     check_ast ast;
-    print_endline (show_def_list ast)
+    (*print_endline (show_def_list ast)*)
   with
   | Failure msg -> print_endline msg
   | Parser.Error -> print_endline "parser error"

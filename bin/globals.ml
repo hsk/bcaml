@@ -5,8 +5,8 @@ type ctx = {tyenv:tyenv;tydecls:type_decl list;mods:ctx list}
 
 let modules = ref {tyenv=[];tydecls=[];mods=[]}
 
-let push_binding binding = 
-  modules := {!modules with tyenv=binding::!modules.tyenv}
+let push_tyenv env = 
+  modules := {!modules with tyenv=env@(!modules.tyenv)}
 
 let push_tydecl decl = 
   modules := {!modules with tydecls=decl@(!modules.tydecls)}

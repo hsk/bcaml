@@ -8,18 +8,8 @@ let gen_id () =
   incr curr_id;
   ret
 
-let rec type_repr ty =
-  match ty with
-  | Tvar {contents=Unbound _} -> ty
-  | Tvar ({contents=Linkto t1} as link) ->
-    let t2 = type_repr t1 in
-    link := Linkto t2;
-    t2 
-  | _ -> ty
-
 let new_type_var level =
   Tvar (ref (Unbound {id=Idint (gen_id ());level=level}))
-
 
 let min lhs rhs =
   match lhs,rhs with
@@ -29,7 +19,6 @@ let min lhs rhs =
   | None, None -> None
 
 let rec get_type_level ty =
-  let ty = type_repr ty in
   match ty with
   | Tvar {contents=Unbound{id=_;level=level}} -> Some level
   | Tvar {contents=Linkto ty} -> get_type_level ty
@@ -52,7 +41,6 @@ and get_type_level_list = function
 let free_type_vars level ty =
   let fv = ref [] in
   let rec free_vars ty =
-    let ty = type_repr ty in
     match ty with
     | Tvar _ ->
       begin match get_type_level ty with
@@ -69,7 +57,6 @@ let free_type_vars level ty =
   !fv
 
 let rec generalize level ty =
-  let ty = type_repr ty in
   match ty with
   | Tvar link ->
     begin match link with
@@ -89,7 +76,6 @@ let rec generalize level ty =
   | _ -> ()
 
 let instantiate level ty =
-  let ty = type_repr ty in
   let id_var_hash = Hashtbl.create 10 in
   let rec f ty =
     match ty with

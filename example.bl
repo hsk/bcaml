@@ -1,9 +1,11 @@
 let x = 5 in
-   x;;
-
-5;;
+   x + 3;;
 
 let id x = x;;
+
+type 'a option =
+| Some of 'a
+| None;;
 
 let apply f = function
 | Some x -> Some(f x)
