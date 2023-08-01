@@ -155,7 +155,7 @@ let rec check_ast = function
 | Defexpr expr::rest ->
   let ty = type_expr ([("+",Tarrow(Tint,Tarrow(Tint,Tint)))]@ get_tyenv ()) 0 expr in
   ignore ty;
-  (*print_endline (show_ty ty);*)
+  print_endline (show_ty ty);
   check_ast rest
 | Deflet l::rest ->
   let add_env = type_let ([("+",Tarrow(Tint,Tarrow(Tint,Tint)))]@ get_tyenv ()) l in
@@ -165,7 +165,7 @@ let rec check_ast = function
 | Defletrec l::rest ->
   let add_env = type_letrec ([("+",Tarrow(Tint,Tarrow(Tint,Tint)))]@ get_tyenv ()) l in
   push_tyenv add_env;
-  (*print_endline (show_tyenv add_env);*)
+  print_endline (show_tyenv add_env);
   check_ast rest
 | [] ->
   ()

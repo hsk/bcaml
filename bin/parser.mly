@@ -7,7 +7,7 @@
 
 %token LPAREN RPAREN LBRACK RBRACK LBRACE RBRACE
 %token COLON COMMA SEMI SEMISEMI CONS QUOTE DOT
-%token BEGIN END
+%token BEGIN END TUNIT TBOOL TINT TFLOAT TSTRING TCHAR
 %token <string> LID UID
 %token WILD AS
 %token <int> INT
@@ -88,7 +88,7 @@ expr:
 | IF expr THEN expr ELSE expr
     { Econdition($2,$4,$6) }
 | expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
-| expr CONS expr { Econstruct("::",Etuple($1::$3::[])) }
+| expr CONS expr { Econs($1,$3) }
 | MINUS expr %prec prec_uminus { Eapply(Evar("-"),$2::[]) }
 | MINUSDOT expr %prec prec_uminus { Eapply(Evar("-."),$2::[]) }
 | LNOT expr  { Eapply(Evar("lnot"),$2::[]) }
@@ -104,7 +104,7 @@ simple_expr:
 simple_expr_:
 | ident { Evar $1 }
 | const_expr { Econstant $1 }
-| LBRACK RBRACK { Econstruct("[]",Etag) }
+| LBRACK RBRACK { Enil }
 | LBRACK expr_semi_list RBRACK { $2 }
 | LBRACE expr_label_list RBRACE { Erecord $2 }
 | LPAREN RPAREN { Econstruct("()",Etag) }
@@ -117,9 +117,9 @@ simple_expr_:
 
 expr_semi_list:
 | expr_semi_list SEMI expr %prec prec_list 
-  { Econstruct("::",Etuple($1::$3::[])) }
+  { Econs($1,$3) }
 | expr %prec prec_list
-  { Econstruct("::",Etuple($1::(Econstruct("[]",Etag))::[])) }
+  { Econs($1,Enil) }
 
 expr_label_list:
 | expr_label_list SEMI field EQ expr %prec prec_list
@@ -170,7 +170,7 @@ pat:
 | pat AS lid
     { Palias($1,$3) }
 | pat CONS pat
-    { Pconstruct("::",Ptuple($1::$3::[])) }
+    { Pcons($1,$3) }
 | UID simple_pat
     { Pconstruct($1,$2) }
 
@@ -181,9 +181,9 @@ comma_pat:
 
 pat_semi_list:
 | pat_semi_list SEMI pat 
-  { Pconstruct("::",Ptuple($1::$3::[])) }
+  { Pcons($1,$3) }
 | pat
-  { Pconstruct("::",Ptuple($1::(Pconstruct("[]",Ptag))::[])) }
+  { Pcons($1,Pnil) }
 
 
 simple_pat: 
@@ -200,7 +200,7 @@ simple_pat:
 | LBRACK pat_semi_list RBRACK
     { $2 }
 | LBRACK RBRACK
-    { Pconstruct("[]",Ptag) }
+    { Pnil }
 | LPAREN RPAREN
     { Pconstruct("()",Ptag) }
 | LPAREN pat COLON ty RPAREN
@@ -321,6 +321,20 @@ simple_ty:
     { Tconstr($6,$2::$4) }
 | simple_ty tyname
     { Tconstr($2,$1::[]) }
+| TUNIT
+    { Tunit }
+| TBOOL
+    { Tbool }
+| TINT
+    { Tint }
+| TFLOAT
+    { Tfloat }
+| TCHAR
+    { Tchar }
+| TSTRING
+    { Tstring }
+| simple_ty REF
+    { Tref $1 }
 | tyname
     { Tconstr($1,[]) }
 | param

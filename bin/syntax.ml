@@ -49,6 +49,8 @@ and expr =
 | Econstant of constant
 | Ebuildin of buildin
 | Etuple of expr list
+| Enil
+| Econs of expr * expr
 | Elist of expr list
 | Etag
 | Econstruct of string * expr
@@ -71,6 +73,8 @@ and pat =
 | Palias of pat * string
 | Pconstant of constant
 | Ptuple of pat list
+| Pnil 
+| Pcons of pat * pat
 | Ptag
 | Pconstruct of string * pat
 | Por of pat * pat

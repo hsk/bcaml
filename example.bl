@@ -1,4 +1,4 @@
-let x = 5 in
+(*let x = 5 in
    x + 3;;
 
 let id x = x;;
@@ -11,12 +11,25 @@ let apply f = function
 | Some x -> Some(f x)
 | None -> None;;
 
-type int = | X;;
 
 type ('a,'b) x = 
-| X of  ('a,'b) x
+| X of  ('a,'b) x ref
+| Y of int
 ;;
+
+type y = {data:y ref};;
 
 type a = b and b = int;;
 
 type 'a obj = {data:'a};;
+
+type ('a) a =
+| X of int * int;;*)
+
+5::[];;
+
+
+
+let rec length n = function
+| [] -> n
+| _::rest -> length (n+1) rest in length 0;;

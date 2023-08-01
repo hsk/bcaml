@@ -113,7 +113,12 @@ rule token = parse
 | "ref" { REF }
 | "then" { THEN }
 | "type" { TYPE }
-
+| "unit" { TUNIT }
+| "bool" { TBOOL }
+| "int" { TINT }
+| "float" { TFLOAT }
+| "char" { TCHAR }
+| "string" { TSTRING }
 
 | lid as s { LID s }
 | uid as s { UID s }

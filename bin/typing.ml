@@ -132,9 +132,10 @@ let rec adjustlevel level = function
 
 let rec unify ty1 ty2 = 
   match ty1, ty2 with
+  | Tvar link1, Tvar link2 when link1 = link2 -> ()
   | Tvar ({contents=Unbound{id=id;level=level}} as link), ty 
   | ty, Tvar ({contents=Unbound{id=id;level=level}} as link) ->
-    if occursin id ty then failwith "unify error due to ocurr check";
+    if occursin id ty then failwith (Printf.sprintf "unify error due to ocurr check %s" (show_ty ty));
     adjustlevel level ty;
     link := Linkto ty
   | Tvar {contents=Linkto t1}, t2
@@ -148,6 +149,9 @@ let rec unify ty1 ty2 =
   | Trecord(name1,fields1), Trecord(name2,fields2) when name1 = name2 ->
     unify_list (List.map snd fields1) (List.map snd fields2)
   | Tvariant(name1,fields1), Tvariant(name2,fields2) when name1 = name2 -> 
+    print_endline (Printf.sprintf "%s,%s" name1 name2);
+    print_endline (show_tyenv fields1);
+    print_endline (show_tyenv fields2);
     unify_list (List.map snd fields1) (List.map snd fields2)
   | ty1,ty2 when ty1 = ty2 -> ()
   | _ -> failwith "Cannot unify types" 
@@ -182,6 +186,7 @@ let rec decl_to_ty name =
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
     (tyl,convert_constr(Trecord(n,fields)))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
+    print_endline (Printf.sprintf "%s" name);
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
     (tyl,convert_constr(Tvariant(n,fields)))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
@@ -265,14 +270,14 @@ let label_belong_to label =
   let rec aux = function
   | Drecord(name,_,fields)::_ when List.mem_assoc label fields -> name
   | _::rest -> aux rest
-  | _ -> failwith "label_belong_to"
+  | _ -> failwith (Printf.sprintf "label_belong_to %s" label)
   in aux !modules.tydecls
 
 let tag_belong_to tag =
   let rec aux = function
   | Dvariant(name,_,fields)::_ when List.mem_assoc tag fields -> name
   | _::rest -> aux rest
-  | _ -> failwith "tag_belong_to"
+  | _ -> failwith (Printf.sprintf "tag_belong_to %s" tag)
   in aux !modules.tydecls
 
 let rec subst_ty_to_tvar t ty =
@@ -301,6 +306,8 @@ let rec is_simple = function
 | Econstant _ -> true
 | Ebuildin _ -> false
 | Etuple l -> List.for_all is_simple l
+| Enil -> true
+| Econs(car,cdr) -> is_simple car && is_simple cdr
 | Elist _ -> true
 | Etag -> true
 | Econstruct(_,expr) -> is_simple expr
@@ -339,6 +346,18 @@ let rec type_patt level new_env pat ty =
     let tyl = List.init (List.length patl) (fun _ -> new_type_var level) in
     unify (Ttuple tyl) ty;
     List.fold_left2 (type_patt level) new_env patl tyl
+  | Pnil ->
+    unify ty (Tlist (new_type_var level));
+    new_env
+  | Pcons(car,cdr) ->
+    let ty1 = new_type_var level in
+    let ty2 = new_type_var level in
+    let new_env = type_patt level new_env car ty1 in
+    let new_env = type_patt level new_env cdr ty2 in
+    unify (Tlist ty1) ty2;
+    print_endline (show_ty ty);
+    unify ty2 ty;
+    new_env
   | Ptag ->
     unify ty Ttag;
     new_env
@@ -401,7 +420,13 @@ and type_expr env level = function
   | Cchar _ -> Tchar
   end
 | Ebuildin _ -> Tint
-| Etuple l -> Ttuple(List.map (type_expr env level) l)
+| Etuple l -> Ttuple(List.map (fun t->type_expr env level t) l)
+| Enil -> Tlist (new_type_var level)
+| Econs(car,cdr) ->
+  let ty1 = type_expr env level car in
+  let ty2 = type_expr env level cdr in
+  unify (Tlist ty1) ty2;
+  ty2
 | Elist l -> 
   let ty = new_type_var level in
   List.iter (fun expr -> unify ty (type_expr env level expr)) l;
@@ -515,6 +540,7 @@ and validate_variant_expr env level (tag_name,expr) =
   let fields = subst_ty_to_tvar_in_fields fields (new_type_var level) in
   let ty = List.assoc tag_name fields in
   unify ty (type_expr env level expr);
+  print_endline (show_tyenv fields);
   fields
 
 let type_let env pat_expr =
