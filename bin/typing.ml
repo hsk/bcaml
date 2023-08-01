@@ -130,7 +130,7 @@ let rec adjustlevel level = function
 | Trecord(_,fields) | Tvariant(_,fields) -> List.iter (adjustlevel level) (List.map snd fields)
 | _ -> ()
 
-let rec unify ty1 ty2 = 
+let rec unify ty1 ty2 =
   match ty1, ty2 with
   | Tvar link1, Tvar link2 when link1 = link2 -> ()
   | Tvar ({contents=Unbound{id=id;level=level}} as link), ty 
@@ -149,9 +149,6 @@ let rec unify ty1 ty2 =
   | Trecord(name1,fields1), Trecord(name2,fields2) when name1 = name2 ->
     unify_list (List.map snd fields1) (List.map snd fields2)
   | Tvariant(name1,fields1), Tvariant(name2,fields2) when name1 = name2 -> 
-    print_endline (Printf.sprintf "%s,%s" name1 name2);
-    print_endline (show_tyenv fields1);
-    print_endline (show_tyenv fields2);
     unify_list (List.map snd fields1) (List.map snd fields2)
   | ty1,ty2 when ty1 = ty2 -> ()
   | _ -> failwith "Cannot unify types" 
@@ -186,7 +183,6 @@ let rec decl_to_ty name =
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
     (tyl,convert_constr(Trecord(n,fields)))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
-    print_endline (Printf.sprintf "%s" name);
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
     (tyl,convert_constr(Tvariant(n,fields)))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
@@ -309,6 +305,11 @@ let rec is_simple = function
 | Enil -> true
 | Econs(car,cdr) -> is_simple car && is_simple cdr
 | Elist _ -> true
+| Eref _ -> false
+| Ederef _ -> false
+| Eassign(_,_) -> false
+| Eloc _ -> true
+| Eunit -> true
 | Etag -> true
 | Econstruct(_,expr) -> is_simple expr
 | Eapply _ -> false
@@ -357,6 +358,14 @@ let rec type_patt level new_env pat ty =
     unify (Tlist ty1) ty2;
     print_endline (show_ty ty);
     unify ty2 ty;
+    new_env
+  | Pref expr ->
+    let ty1 = new_type_var level in
+    let new_env = type_patt level new_env expr ty1 in
+    unify (Tref ty1) ty;
+    new_env
+  | Punit ->
+    unify Tunit ty;
     new_env
   | Ptag ->
     unify ty Ttag;
@@ -431,6 +440,24 @@ and type_expr env level = function
   let ty = new_type_var level in
   List.iter (fun expr -> unify ty (type_expr env level expr)) l;
   Tlist ty
+| Eref expr ->
+  let ty = type_expr env level expr in
+  Tref ty
+| Ederef expr ->
+  let ty1 = new_type_var level in
+  let ty2 = type_expr env level expr in
+  unify (Tref ty1) ty2;
+  ty1
+| Eassign(lhs,rhs) ->
+  let ty1 = type_expr env level lhs in
+  let ty2 = type_expr env level rhs in
+  unify ty1 (Tref ty2);
+  Tunit
+| Eloc _ ->
+  let ty = new_type_var level in
+  Tref ty
+| Eunit ->
+  Tunit
 | Etag -> Ttag
 | Econstruct(tag_name,expr) -> 
   let variant_name = tag_belong_to tag_name in

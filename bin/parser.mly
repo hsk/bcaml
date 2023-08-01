@@ -88,13 +88,14 @@ expr:
 | IF expr THEN expr ELSE expr
     { Econdition($2,$4,$6) }
 | expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
+| expr ASSIGN expr { Eassign($1,$3) }
 | expr CONS expr { Econs($1,$3) }
 | MINUS expr %prec prec_uminus { Eapply(Evar("-"),$2::[]) }
 | MINUSDOT expr %prec prec_uminus { Eapply(Evar("-."),$2::[]) }
 | LNOT expr  { Eapply(Evar("lnot"),$2::[]) }
 | NOT expr  { Eapply(Evar("not"),$2::[]) }
-| REF expr { Econstruct("ref",Etuple($2::[])) }
-| DEREF expr { Econstruct("!",Etuple($2::[])) }
+| REF expr { Eref($2) }
+| DEREF expr { Ederef($2) }
 | UID simple_expr { Econstruct($1,$2) }
 
 simple_expr:
@@ -107,7 +108,7 @@ simple_expr_:
 | LBRACK RBRACK { Enil }
 | LBRACK expr_semi_list RBRACK { $2 }
 | LBRACE expr_label_list RBRACE { Erecord $2 }
-| LPAREN RPAREN { Econstruct("()",Etag) }
+| LPAREN RPAREN { Eunit }
 | LPAREN expr COMMA separated_nonempty_list(COMMA,expr) RPAREN
     { Etuple($2::$4) }
 | LPAREN expr COLON ty RPAREN { Econstraint($2,$4) }
@@ -173,7 +174,8 @@ pat:
     { Pcons($1,$3) }
 | UID simple_pat
     { Pconstruct($1,$2) }
-
+| REF simple_pat
+    { Pref $2 }
 
 comma_pat: 
 | pat COMMA separated_nonempty_list(COMMA, pat)
@@ -202,7 +204,7 @@ simple_pat:
 | LBRACK RBRACK
     { Pnil }
 | LPAREN RPAREN
-    { Pconstruct("()",Ptag) }
+    { Punit }
 | LPAREN pat COLON ty RPAREN
     { Pconstraint ($2,$4) }
 | LPAREN pat RPAREN
@@ -245,8 +247,6 @@ ident:
     { "<=" }
 | GE
     { ">=" }
-| ASSIGN
-    { ":=" }
 | AT
     { "@" }
 | PLUS

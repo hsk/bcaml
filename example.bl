@@ -1,5 +1,5 @@
-(*let x = 5 in
-   x + 3;;
+let x = 5 in
+  x + 3;;
 
 let id x = x;;
 
@@ -23,13 +23,17 @@ type a = b and b = int;;
 
 type 'a obj = {data:'a};;
 
-type ('a) a =
-| X of int * int;;*)
-
-5::[];;
-
-
+type 'a a =
+| X of int * int;;
 
 let rec length n = function
 | [] -> n
 | _::rest -> length (n+1) rest in length 0;;
+
+let curr_id = ref 0;;
+
+let gen_id () =
+  let ret = !curr_id in
+  curr_id := !curr_id + 1;
+  ret
+;;

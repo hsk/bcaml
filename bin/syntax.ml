@@ -52,7 +52,12 @@ and expr =
 | Enil
 | Econs of expr * expr
 | Elist of expr list
+| Eref of expr
+| Ederef of expr
+| Eassign of expr * expr
+| Eloc of int
 | Etag
+| Eunit
 | Econstruct of string * expr
 | Eapply of expr * expr list
 | Elet of (pat * expr) list * expr
@@ -75,6 +80,8 @@ and pat =
 | Ptuple of pat list
 | Pnil 
 | Pcons of pat * pat
+| Pref of pat
+| Punit
 | Ptag
 | Pconstruct of string * pat
 | Por of pat * pat
