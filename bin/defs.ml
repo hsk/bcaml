@@ -50,7 +50,7 @@ let rec abbrev_found_in_ty decl seen = function
 | Tarrow(arg,ret) -> abbrev_found_in_ty decl seen arg; abbrev_found_in_ty decl seen ret
 | Ttuple tyl -> List.iter (abbrev_found_in_ty decl seen) tyl
 | Tconstr(name,_) when name_is_checking name seen -> 
-  failwith "recursive type abbreviation"
+  failwith (Printf.sprintf "recursive type abbreviation %s" name)
 | Tconstr(name,tyl) when name_is_checked name seen -> 
   List.iter (abbrev_found_in_ty decl seen) tyl
 | Tconstr(name,tyl) when is_abbrev name decl ->
@@ -96,34 +96,39 @@ let rec def_found_in_ty decl seen = function
 | Tarrow(arg,ret) -> def_found_in_ty decl seen arg; def_found_in_ty decl seen ret
 | Ttuple tyl -> List.iter (def_found_in_ty decl seen) tyl
 | Trecord(name,_) when name_is_checking name seen -> 
-  failwith "recursive type abbreviation"
+  failwith (Printf.sprintf "recursive type definition %s" name)
 | Trecord(name,fields) when name_is_checked name seen -> 
   List.iter (def_found_in_ty decl seen) (List.map snd fields)
 | Trecord(name,fields) when is_def name decl ->
   def_found_in_decl name seen decl;
   List.iter (abbrev_found_in_ty decl seen) (List.map snd fields)
 | Tvariant(name,_) when name_is_checking name seen -> 
-  failwith "recursive type abbreviation"
+  failwith (Printf.sprintf "recursive type definition %s" name)
 | Tvariant(name,fields) when name_is_checked name seen -> 
   List.iter (def_found_in_ty decl seen) (List.map snd fields)
 | Tvariant(name,fields) when is_def name decl ->
   def_found_in_decl name seen decl;
-  List.iter (abbrev_found_in_ty decl seen) (List.map snd fields)
+  List.iter (def_found_in_ty decl seen) (List.map snd fields)
+| Tconstr(name,_) when is_def name decl ->
+  failwith (Printf.sprintf "recursive type definition %s" name)
+| Tconstr(_,_) as t ->
+  def_found_in_ty decl seen (convert_constr t)
 | _ -> ()
 
 and def_found_in_decl name seen decl = 
   let rec aux = function
   | Drecord(n,_,fields)::_ when n = name ->
     let pair = (name,ref Checking) in
-    List.iter (fun t->def_found_in_ty decl (pair::seen) (convert_constr t)) (List.map snd fields);
+    List.iter (fun t->def_found_in_ty decl (pair::seen) t) (List.map snd fields);
     snd pair := Checked
   | Dvariant(n,_,fields)::_ when n = name ->
     let pair = (name,ref Checking) in
-    List.iter (fun t->def_found_in_ty decl (pair::seen) (convert_constr t)) (List.map snd fields);
+    List.iter (fun t->def_found_in_ty decl (pair::seen) t) (List.map snd fields);
     snd pair := Checked
   | _::rest ->
     aux rest
   | [] ->
+  print_endline (Printf.sprintf "cycle found %s" name);
     failwith "name not found def_found_in_decl"
   in aux decl
 

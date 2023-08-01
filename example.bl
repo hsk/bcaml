@@ -14,7 +14,7 @@ let apply f = function
 type int = | X;;
 
 type ('a,'b) x = 
-| X of int
+| X of  ('a,'b) x
 ;;
 
 type a = b and b = int;;
