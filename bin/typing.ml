@@ -323,6 +323,52 @@ let rec is_simple = function
 | Erecord_access(expr,_) -> is_simple expr
 | Ewhen(expr,body) -> is_simple expr && is_simple body
 
+let type_prim level = function
+| Beq
+| Bnq
+| Blt
+| Bgt
+| Ble
+| Bge
+| Beqimm
+| Bnqimm ->
+  let tvar = new_type_var level in
+  Tarrow(tvar,(Tarrow(tvar,Tbool)))
+| Bnot -> Tarrow(Tbool,Tbool)
+| Band 
+| Bor -> Tarrow(Tbool,Tarrow(Tbool,Tbool))
+| Bnegint
+| Baddint
+| Bsubint
+| Bmulint
+| Bdivint
+| Bmod
+| Blnot
+| Bland
+| Blor
+| Blxor
+| Blsl
+| Blsr
+| Basr -> Tarrow(Tint,Tarrow(Tint,Tint))
+| Bnegfloat
+| Baddfloat
+| Bsubfloat
+| Bmulfloat
+| Bdivfloat
+| Bpower -> Tarrow(Tfloat,Tarrow(Tfloat,Tfloat))
+| Bconcatstring -> Tarrow(Tstring,Tarrow(Tstring,Tstring))
+| Bintofchar -> Tarrow(Tchar,Tint)
+| Bcharofint -> Tarrow(Tint,Tchar)
+| Bstringofbool -> Tarrow(Tbool,Tstring)
+| Bboolofstring -> Tarrow(Tstring,Tbool)
+| Bstringofint -> Tarrow(Tint,Tstring)
+| Bintofstring -> Tarrow(Tstring,Tint)
+| Bstringoffloat -> Tarrow(Tfloat,Tstring)
+| Bfloatofstring -> Tarrow(Tstring,Tfloat)
+| Bconcat -> 
+  let tvar = new_type_var level in
+  Tarrow(Tlist tvar,(Tarrow(Tlist tvar,Tlist tvar)))
+
 let rec type_patt level new_env pat ty =
   match pat with
   | Pwild -> new_env
@@ -428,7 +474,7 @@ and type_expr env level = function
   | Cstring _ -> Tstring
   | Cchar _ -> Tchar
   end
-| Ebuildin _ -> Tint
+| Ebuildin prim -> type_prim level prim
 | Etuple l -> Ttuple(List.map (fun t->type_expr env level t) l)
 | Enil -> Tlist (new_type_var level)
 | Econs(car,cdr) ->

@@ -6,10 +6,6 @@ type constant =
 | Cchar of char
 [@@deriving show]
 
-type buildin =
-| BAddint
-[@@deriving show]
-
 let generic = -1
 let notgeneric = 0
 
@@ -44,10 +40,53 @@ and ty =
 | Ttag
 [@@deriving show]
 
+type prim =
+| Beq
+| Bnq
+| Blt
+| Bgt
+| Ble
+| Bge
+| Beqimm
+| Bnqimm
+| Bnot
+| Band 
+| Bor
+| Bnegint
+| Baddint
+| Bsubint
+| Bmulint
+| Bdivint
+| Bmod
+| Blnot
+| Bland
+| Blor
+| Blxor
+| Blsl
+| Blsr
+| Basr
+| Bnegfloat
+| Baddfloat
+| Bsubfloat
+| Bmulfloat
+| Bdivfloat
+| Bpower
+| Bconcatstring
+| Bintofchar
+| Bcharofint
+| Bstringofbool
+| Bboolofstring
+| Bstringofint
+| Bintofstring
+| Bstringoffloat
+| Bfloatofstring
+| Bconcat
+[@@deriving show]
+
 and expr =
 | Evar of string
 | Econstant of constant
-| Ebuildin of buildin
+| Ebuildin of prim
 | Etuple of expr list
 | Enil
 | Econs of expr * expr
