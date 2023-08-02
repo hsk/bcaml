@@ -40,49 +40,6 @@ and ty =
 | Ttag
 [@@deriving show]
 
-type prim =
-| Beq
-| Bnq
-| Blt
-| Bgt
-| Ble
-| Bge
-| Beqimm
-| Bnqimm
-| Bnot
-| Band 
-| Bor
-| Bnegint
-| Baddint
-| Bsubint
-| Bmulint
-| Bdivint
-| Bmod
-| Blnot
-| Bland
-| Blor
-| Blxor
-| Blsl
-| Blsr
-| Basr
-| Bnegfloat
-| Baddfloat
-| Bsubfloat
-| Bmulfloat
-| Bdivfloat
-| Bpower
-| Bconcatstring
-| Bintofchar
-| Bcharofint
-| Bstringofbool
-| Bboolofstring
-| Bstringofint
-| Bintofstring
-| Bstringoffloat
-| Bfloatofstring
-| Bconcat
-[@@deriving show]
-
 and expr =
 | Evar of string
 | Econstant of constant

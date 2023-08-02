@@ -1,4 +1,5 @@
 open Syntax
+open Prims
 open Globals
 
 let curr_id = ref 0
@@ -321,49 +322,6 @@ let rec is_simple = function
 | Erecord l -> List.for_all is_simple (List.map snd l)
 | Erecord_access(expr,_) -> is_simple expr
 | Ewhen(expr,body) -> is_simple expr && is_simple body
-
-let prim_list = [
-("=",Beq);
-("<>",Bnq);
-("<",Blt);
-(">",Bgt);
-("<=",Ble);
-(">=",Bge);
-("==",Beqimm);
-("!=",Bnqimm);
-("not",Bnot);
-("&&",Band);
-("||",Bor);
-("~-",Bnegint);
-("+",Baddint);
-("-",Bsubint);
-("*",Bmulint);
-("/",Bdivint);
-("mod",Bmod);
-("lnot",Blnot);
-("land",Bland);
-("lor",Blor);
-("lxor",Blxor);
-("lsl",Blsl);
-("lsr",Blsr);
-("asr",Basr);
-("~-.",Bnegfloat);
-("+.",Baddfloat);
-("-.",Bsubfloat);
-("*.",Bmulfloat);
-("/.",Bdivfloat);
-("**",Bpower);
-("^",Bconcatstring);
-("int_of_char",Bintofchar);
-("char_of_int",Bcharofint);
-("string_of_bool",Bstringofbool);
-("bool_of_string",Bboolofstring);
-("string_of_int",Bstringofint);
-("int_of_string",Bintofstring);
-("string_of_float",Bstringoffloat);
-("float_of_string",Bfloatofstring);
-("@",Bconcat)
-]
 
 let type_prim level = function
 | Beq
