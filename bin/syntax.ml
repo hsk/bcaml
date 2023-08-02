@@ -86,7 +86,6 @@ type prim =
 and expr =
 | Evar of string
 | Econstant of constant
-| Ebuildin of prim
 | Etuple of expr list
 | Enil
 | Econs of expr * expr

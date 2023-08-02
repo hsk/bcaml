@@ -90,8 +90,8 @@ expr:
 | expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
 | expr ASSIGN expr { Eassign($1,$3) }
 | expr CONS expr { Econs($1,$3) }
-| MINUS expr %prec prec_uminus { Eapply(Evar("-"),$2::[]) }
-| MINUSDOT expr %prec prec_uminus { Eapply(Evar("-."),$2::[]) }
+| MINUS expr %prec prec_uminus { Eapply(Evar("~-"),$2::[]) }
+| MINUSDOT expr %prec prec_uminus { Eapply(Evar("~-."),$2::[]) }
 | LNOT expr  { Eapply(Evar("lnot"),$2::[]) }
 | NOT expr  { Eapply(Evar("not"),$2::[]) }
 | REF expr { Eref($2) }

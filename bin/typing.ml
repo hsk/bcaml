@@ -300,7 +300,6 @@ and subst_ty_to_tvar_in_fields fields ty =
 let rec is_simple = function
 | Evar _ -> true
 | Econstant _ -> true
-| Ebuildin _ -> false
 | Etuple l -> List.for_all is_simple l
 | Enil -> true
 | Econs(car,cdr) -> is_simple car && is_simple cdr
@@ -322,6 +321,49 @@ let rec is_simple = function
 | Erecord l -> List.for_all is_simple (List.map snd l)
 | Erecord_access(expr,_) -> is_simple expr
 | Ewhen(expr,body) -> is_simple expr && is_simple body
+
+let prim_list = [
+("=",Beq);
+("<>",Bnq);
+("<",Blt);
+(">",Bgt);
+("<=",Ble);
+(">=",Bge);
+("==",Beqimm);
+("!=",Bnqimm);
+("not",Bnot);
+("&&",Band);
+("||",Bor);
+("~-",Bnegint);
+("+",Baddint);
+("-",Bsubint);
+("*",Bmulint);
+("/",Bdivint);
+("mod",Bmod);
+("lnot",Blnot);
+("land",Bland);
+("lor",Blor);
+("lxor",Blxor);
+("lsl",Blsl);
+("lsr",Blsr);
+("asr",Basr);
+("~-.",Bnegfloat);
+("+.",Baddfloat);
+("-.",Bsubfloat);
+("*.",Bmulfloat);
+("/.",Bdivfloat);
+("**",Bpower);
+("^",Bconcatstring);
+("int_of_char",Bintofchar);
+("char_of_int",Bcharofint);
+("string_of_bool",Bstringofbool);
+("bool_of_string",Bboolofstring);
+("string_of_int",Bstringofint);
+("int_of_string",Bintofstring);
+("string_of_float",Bstringoffloat);
+("float_of_string",Bfloatofstring);
+("@",Bconcat)
+]
 
 let type_prim level = function
 | Beq
@@ -465,7 +507,15 @@ and validate_variant_pat env level (tag_name,pat) ty =
   type_patt level env pat ty
 
 and type_expr env level = function
-| Evar s -> instantiate level (List.assoc s env)
+| Evar s ->
+  begin
+    try 
+      let prim = List.assoc s prim_list in
+      type_prim level prim
+    with
+    | _ ->
+      instantiate level (List.assoc s env)
+  end
 | Econstant cst -> 
   begin match cst with
   | Cint _ -> Tint
@@ -474,7 +524,6 @@ and type_expr env level = function
   | Cstring _ -> Tstring
   | Cchar _ -> Tchar
   end
-| Ebuildin prim -> type_prim level prim
 | Etuple l -> Ttuple(List.map (fun t->type_expr env level t) l)
 | Enil -> Tlist (new_type_var level)
 | Econs(car,cdr) ->

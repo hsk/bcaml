@@ -37,3 +37,5 @@ let gen_id () =
   curr_id := !curr_id + 1;
   ret
 ;;
+
+let is_same = fun x y -> x = y;;
