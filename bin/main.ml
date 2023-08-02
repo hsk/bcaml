@@ -5,7 +5,7 @@ let () =
   let argc = Array.length Sys.argv in
   if argc != 2 then 
     begin
-      Format.printf "Usage: ./block [filename]\n";exit (-1)
+      Format.printf "Usage: ./bcaml [filename]\n";exit (-1)
     end
   else
   let fname = Sys.argv.(1) in
