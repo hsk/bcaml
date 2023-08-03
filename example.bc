@@ -38,4 +38,4 @@ let gen_id () =
   ret
 ;;
 
-let is_same = fun x y -> x = y;;
+let is_same = fun x y -> x ;;

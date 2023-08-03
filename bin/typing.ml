@@ -301,6 +301,7 @@ and subst_ty_to_tvar_in_fields fields ty =
 let rec is_simple = function
 | Evar _ -> true
 | Econstant _ -> true
+| Ebuildin _ -> true
 | Etuple l -> List.for_all is_simple l
 | Enil -> true
 | Econs(car,cdr) -> is_simple car && is_simple cdr
@@ -482,6 +483,7 @@ and type_expr env level = function
   | Cstring _ -> Tstring
   | Cchar _ -> Tchar
   end
+| Ebuildin prim -> type_prim level prim
 | Etuple l -> Ttuple(List.map (fun t->type_expr env level t) l)
 | Enil -> Tlist (new_type_var level)
 | Econs(car,cdr) ->
