@@ -68,7 +68,6 @@ let rec subst expr name expr' = match expr with
 let rec eval_match store pat expr expr'= match (pat,expr') with
 | (Pwild,_) -> expr
 | (Pvar name,_) -> subst expr name expr'
-| (Pparams [],_) -> failwith "eval_match"
 | (Pparams [p],_) -> eval_match store p expr expr'
 | (Pparams(p::pl),_) -> Efunction((Pparams(pl),eval_match store p expr expr')::[])
 | (Palias(p,name),_) -> eval_match store p (subst expr name expr') expr'
