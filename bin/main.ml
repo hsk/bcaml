@@ -1,5 +1,6 @@
 open Syntax
 open Defs
+open Core 
 
 let () =
   let argc = Array.length Sys.argv in
