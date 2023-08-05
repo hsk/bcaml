@@ -45,7 +45,7 @@ and ty =
 and expr =
 | Evar of string
 | Econstant of constant
-| Ebuildin of prim
+| Eprim of prim
 | Etuple of expr list
 | Enil
 | Econs of expr * expr
@@ -106,3 +106,27 @@ and def_list = def list
 
 type tyenv = (string * ty) list
 [@@deriving show]
+
+let get_constant = function
+| Econstant cst -> cst
+| _ -> failwith "get_constant"
+
+let get_int = function
+| Cint i -> i
+| _ -> failwith "get_int"
+
+let get_bool = function
+| Cbool b -> b
+| _ -> failwith "get_bool"
+
+let get_float = function
+| Cfloat f -> f
+| _ -> failwith "get_float"
+
+let get_string = function
+| Cstring s -> s
+| _ -> failwith "get_string"
+
+let get_char = function
+| Cchar c -> c
+| _ -> failwith "get_char"

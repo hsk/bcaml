@@ -1,6 +1,15 @@
 open Prims
 open Syntax
 
+type ctx = (string *expr) list 
+
+let ctx = ref (List.map (fun (n,p) ->(n,Eprim p)) prim_list)
+
+let extendcontext name v = 
+  ctx := List.append !ctx [(name,v)]
+
+let lookupcontext name = List.assoc name !ctx
+
 type store = expr list 
 
 let store = ref [] 
@@ -21,9 +30,9 @@ let updatestore n v =
     store := f (n,!store)
 
 let rec isval = function
-| Evar _
-| Econstant _
-| Ebuildin _ -> true
+| Evar _ -> false
+| Econstant _ -> true
+| Eprim _ -> false
 | Etuple l -> List.for_all isval l
 | Enil
 | Econs _ -> false
@@ -51,7 +60,7 @@ match expr with
 | Evar n when n = name -> expr'
 | Evar _ -> expr
 | Econstant _
-| Ebuildin _ -> expr
+| Eprim _ -> expr
 | Etuple l -> Etuple(List.map (fun e-> subst e name expr') l)
 | Enil -> expr
 | Econs(car,cdr) -> Econs(subst car name expr', subst cdr name expr')
@@ -113,7 +122,8 @@ let rec eval_matches pat_exprs expr' =
     end
   | _ -> failwith "eval_matches"
 
-let eval_prim = function
+let eval_prim_binary prim x y =
+match prim with
 | Beq
 | Bnq
 | Blt
@@ -153,9 +163,14 @@ let eval_prim = function
 | Bintofstring
 | Bstringoffloat
 | Bfloatofstring
-| Bconcat -> (+)
+| Bconcat -> Econstant(Cint((get_int(get_constant x)) + (get_int(get_constant y))))
 
 let rec eval1 = function
+| Evar name -> lookupcontext name
+| Eprim prim when is_unary prim ->
+  Efunction [(Pvar "A",Eapply(Eprim prim,[Evar "A"]))]
+| Eprim prim when is_binary prim ->
+  Efunction [(Pvar "A",Efunction [(Pvar "B",Eapply(Eprim prim,[Evar "A";Evar "B"]))])]
 | Etuple l when not (List.exists isval l) -> Etuple (List.map eval1 l)
 | Enil -> Elist []
 | Econs(car,cdr) when not (isval car) -> Econs(eval1 car,cdr)
@@ -175,6 +190,8 @@ let rec eval1 = function
   Econstruct(name,expr)
 | Econstruct(name,expr) ->
   Econstruct(name,eval1 expr)
+| Eapply(Eprim prim,[e1;e2]) ->
+  eval_prim_binary prim e1 e2
 | Eapply(e,l) when not (isval e) ->
   Eapply(eval1 e,l)
 | Eapply(e,l) when not (List.exists isval l) ->
@@ -215,5 +232,6 @@ let rec eval expr =
   if isval expr then
     expr
   else 
-  try eval expr
+  try 
+    eval expr
   with _ -> failwith "eval"

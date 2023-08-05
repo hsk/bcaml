@@ -301,7 +301,7 @@ and subst_ty_to_tvar_in_fields fields ty =
 let rec is_simple = function
 | Evar _ -> true
 | Econstant _ -> true
-| Ebuildin _ -> true
+| Eprim _ -> true
 | Etuple l -> List.for_all is_simple l
 | Enil -> true
 | Econs(car,cdr) -> is_simple car && is_simple cdr
@@ -338,20 +338,20 @@ let type_prim level = function
 | Bnot -> Tarrow(Tbool,Tbool)
 | Band 
 | Bor -> Tarrow(Tbool,Tarrow(Tbool,Tbool))
-| Bnegint
+| Bnegint -> Tarrow(Tint,Tint)
 | Baddint
 | Bsubint
 | Bmulint
 | Bdivint
-| Bmod
-| Blnot
+| Bmod -> Tarrow(Tint,Tarrow(Tint,Tint))
+| Blnot -> Tarrow(Tint,Tint)
 | Bland
 | Blor
 | Blxor
 | Blsl
 | Blsr
 | Basr -> Tarrow(Tint,Tarrow(Tint,Tint))
-| Bnegfloat
+| Bnegfloat -> Tarrow(Tfloat,Tfloat)
 | Baddfloat
 | Bsubfloat
 | Bmulfloat
@@ -483,7 +483,7 @@ and type_expr env level = function
   | Cstring _ -> Tstring
   | Cchar _ -> Tchar
   end
-| Ebuildin prim -> type_prim level prim
+| Eprim prim -> type_prim level prim
 | Etuple l -> Ttuple(List.map (fun t->type_expr env level t) l)
 | Enil -> Tlist (new_type_var level)
 | Econs(car,cdr) ->

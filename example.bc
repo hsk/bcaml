@@ -1,6 +1,6 @@
-(*let x = 5 in
+let x = 5 in
   x + 3;;
-*)
+(*
 let id x = x;;
 
 type 'a option =
@@ -39,11 +39,12 @@ let gen_id () =
 ;;
 
 let is_same = fun x y -> x ;;
-
+*)
 let x = [] in
-  5::x;;
+  3::x;;
 
-(fun x y-> x) 5 0;;
+(fun x y-> x) 7 0;;
 
 (function 
 | [] -> true) [];;
+

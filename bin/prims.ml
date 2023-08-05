@@ -41,7 +41,6 @@ type prim =
 | Bconcat
 [@@deriving show]
 
-
 let prim_list = [
 ("=",Beq);
 ("<>",Bnq);
@@ -84,3 +83,20 @@ let prim_list = [
 ("float_of_string",Bfloatofstring);
 ("@",Bconcat)
 ]
+
+let is_unary = function
+| Bnot
+| Bnegint
+| Blnot
+| Bnegfloat
+| Bintofchar
+| Bcharofint
+| Bstringofbool
+| Bboolofstring
+| Bstringofint
+| Bintofstring
+| Bstringoffloat
+| Bfloatofstring -> true
+| _ -> false
+
+let is_binary prim = not (is_unary prim)
