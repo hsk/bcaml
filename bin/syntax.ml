@@ -128,5 +128,93 @@ let get_string = function
 | _ -> failwith "get_string"
 
 let get_char = function
-| Cchar c -> c
+| Cchar c ->  c
 | _ -> failwith "get_char"
+
+let do_int op = function
+| Econstant(Cint i) -> Econstant(Cint(op i))
+| _ -> failwith "do_int"
+
+let do_int_to_char op = function
+| Econstant(Cint i) -> Econstant(Cchar(op i))
+| _ -> failwith "do_int_to_char"
+
+let do_int_to_string op = function
+| Econstant(Cint i) -> Econstant(Cstring(op i))
+| _ -> failwith "do_int_to_char"
+
+let do_bool op = function
+| Econstant(Cbool b) -> Econstant(Cbool(op b))
+| _ -> failwith "do_bool"
+
+let do_bool_to_string op = function
+| Econstant(Cbool b) -> Econstant(Cstring(op b))
+| _ -> failwith "do_bool_to_string"
+
+let do_float op = function
+| Econstant(Cfloat f) -> Econstant(Cfloat(op f))
+| _ -> failwith "do_float"
+
+let do_float_to_string op = function
+| Econstant(Cfloat f) -> Econstant(Cstring(op f))
+| _ -> failwith "do_float"
+
+let do_string op = function
+| Econstant(Cstring s) -> Econstant(Cstring(op s))
+| _ -> failwith "do_string"
+
+let do_string_to_bool op = function
+| Econstant(Cstring s) -> Econstant(Cbool(op s))
+| _ -> failwith "do_string_to_bool"
+
+let do_string_to_int op = function
+| Econstant(Cstring s) -> Econstant(Cint(op s))
+| _ -> failwith "do_string_to_int"
+
+let do_string_to_float op = function
+| Econstant(Cstring s) -> Econstant(Cfloat(op s))
+| _ -> failwith "do_string_to_float"
+
+let do_char op = function
+| Econstant(Cchar c) -> Econstant(Cchar(op c))
+| _ -> failwith "do_char"
+
+let do_char_to_int op = function
+| Econstant(Cchar c) -> Econstant(Cint(op c))
+| _ -> failwith "do_char_to_int"
+
+
+let do_int_bin op x y =
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cint(op x y)
+  | _ -> failwith "do_int_bin"
+  in Econstant ret
+
+let do_bool_bin op x y =
+  let ret =
+  match get_constant x, get_constant y with
+  | Cbool x, Cbool y -> Cbool(op x y)
+  | _ -> failwith "do_bool_bin"
+  in Econstant ret
+
+let do_float_bin op x y =
+  let ret =
+  match get_constant x, get_constant y with
+  | Cfloat x, Cfloat y -> Cfloat(op x y)
+  | _ -> failwith "do_float_bin"
+  in Econstant ret
+
+let do_string_bin op x y =
+  let ret =
+  match get_constant x, get_constant y with
+  | Cstring x, Cstring y -> Cstring(op x y)
+  | _ -> failwith "do_string_bin"
+  in Econstant ret
+
+let do_char_bin op x y =
+  let ret =
+  match get_constant x, get_constant y with
+  | Cchar x, Cchar y -> Cchar(op x y)
+  | _ -> failwith "do_char_bin"
+  in Econstant ret

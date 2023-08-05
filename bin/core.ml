@@ -122,48 +122,129 @@ let rec eval_matches pat_exprs expr' =
     end
   | _ -> failwith "eval_matches"
 
+let eval_prim_unary prim x =
+match prim with
+| Bnot -> do_bool (not) x
+| Bnegint -> do_int (~-) x
+| Blnot -> do_int (lnot) x
+| Bnegfloat -> do_float (~-.) x
+| Bintofchar -> do_char_to_int int_of_char x
+| Bcharofint -> do_int_to_char char_of_int x
+| Bstringofbool -> do_bool_to_string string_of_bool x
+| Bboolofstring -> do_string_to_bool bool_of_string x
+| Bstringofint -> do_int_to_string string_of_int x
+| Bintofstring -> do_string_to_int int_of_string x
+| Bstringoffloat -> do_float_to_string string_of_float x
+| Bfloatofstring -> do_string_to_float float_of_string x
+| _ -> failwith "ecal_prim_unary"
+
 let eval_prim_binary prim x y =
 match prim with
-| Beq
-| Bnq
-| Blt
-| Bgt
-| Ble
-| Bge
-| Beqimm
-| Bnqimm
-| Bnot
-| Band 
-| Bor
-| Bnegint
-| Baddint
-| Bsubint
-| Bmulint
-| Bdivint
-| Bmod
-| Blnot
-| Bland
-| Blor
-| Blxor
-| Blsl
-| Blsr
-| Basr
-| Bnegfloat
-| Baddfloat
-| Bsubfloat
-| Bmulfloat
-| Bdivfloat
-| Bpower
-| Bconcatstring
-| Bintofchar
-| Bcharofint
-| Bstringofbool
-| Bboolofstring
-| Bstringofint
-| Bintofstring
-| Bstringoffloat
-| Bfloatofstring
-| Bconcat -> Econstant(Cint((get_int(get_constant x)) + (get_int(get_constant y))))
+| Beq ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((=) x y)
+  | Cbool x, Cbool y -> Cbool((=) x y)
+  | Cfloat x, Cfloat y -> Cbool((=) x y)
+  | Cstring x, Cstring y -> Cbool((=) x y)
+  | Cchar x, Cchar y -> Cbool((=) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Bnq ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((<>) x y)
+  | Cbool x, Cbool y -> Cbool((<>) x y)
+  | Cfloat x, Cfloat y -> Cbool((<>) x y)
+  | Cstring x, Cstring y -> Cbool((<>) x y)
+  | Cchar x, Cchar y -> Cbool((<>) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Blt ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((<) x y)
+  | Cbool x, Cbool y -> Cbool((<) x y)
+  | Cfloat x, Cfloat y -> Cbool((<) x y)
+  | Cstring x, Cstring y -> Cbool((<) x y)
+  | Cchar x, Cchar y -> Cbool((<) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Bgt ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((>) x y)
+  | Cbool x, Cbool y -> Cbool((>) x y)
+  | Cfloat x, Cfloat y -> Cbool((>) x y)
+  | Cstring x, Cstring y -> Cbool((>) x y)
+  | Cchar x, Cchar y -> Cbool((>) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Ble ->  
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((<=) x y)
+  | Cbool x, Cbool y -> Cbool((<=) x y)
+  | Cfloat x, Cfloat y -> Cbool((<=) x y)
+  | Cstring x, Cstring y -> Cbool((<=) x y)
+  | Cchar x, Cchar y -> Cbool((<=) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Bge ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((>=) x y)
+  | Cbool x, Cbool y -> Cbool((>=) x y)
+  | Cfloat x, Cfloat y -> Cbool((>=) x y)
+  | Cstring x, Cstring y -> Cbool((>=) x y)
+  | Cchar x, Cchar y -> Cbool((>=) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Beqimm ->
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((==) x y)
+  | Cbool x, Cbool y -> Cbool((==) x y)
+  | Cfloat x, Cfloat y -> Cbool((==) x y)
+  | Cstring x, Cstring y -> Cbool((==) x y)
+  | Cchar x, Cchar y -> Cbool((==) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Bnqimm ->  
+  let ret =
+  match get_constant x, get_constant y with
+  | Cint x, Cint y -> Cbool((!=) x y)
+  | Cbool x, Cbool y -> Cbool((!=) x y)
+  | Cfloat x, Cfloat y -> Cbool((!=) x y)
+  | Cstring x, Cstring y -> Cbool((!=) x y)
+  | Cchar x, Cchar y -> Cbool((!=) x y)
+  | _ -> failwith "eval_prim_binary"
+  in Econstant ret
+| Band -> do_bool_bin (&&) x y
+| Bor -> do_bool_bin (||) x y
+| Baddint -> do_int_bin (+) x y
+| Bsubint -> do_int_bin (-) x y
+| Bmulint -> do_int_bin ( * ) x y
+| Bdivint -> do_int_bin (/) x y
+| Bmod -> do_int_bin (mod) x y
+| Bland -> do_int_bin (land) x y
+| Blor -> do_int_bin (lor) x y
+| Blxor -> do_int_bin (lxor) x y
+| Blsl -> do_int_bin (lsl) x y
+| Blsr -> do_int_bin (lsr) x y
+| Basr -> do_int_bin (asr) x y
+| Baddfloat -> do_float_bin (+.) x y
+| Bsubfloat -> do_float_bin (-.) x y
+| Bmulfloat -> do_float_bin ( *.) x y
+| Bdivfloat -> do_float_bin (/.) x y
+| Bpower -> do_float_bin ( **) x y
+| Bconcatstring -> do_string_bin (^) x y
+| Bconcat ->
+  begin match x, y with
+  | Elist x, Elist y -> Elist(x @ y)
+  | _ -> failwith "eval_prim_binary"
+  end
+| _ -> failwith "eval_prim_binary"
 
 let rec eval1 = function
 | Evar name -> lookupcontext name
@@ -190,6 +271,14 @@ let rec eval1 = function
   Econstruct(name,expr)
 | Econstruct(name,expr) ->
   Econstruct(name,eval1 expr)
+| Eapply(Eprim prim,[e]) when not (isval e) ->
+  Eapply(Eprim prim,[eval1 e]) 
+| Eapply(Eprim prim,[e]) ->
+  eval_prim_unary prim e
+| Eapply(Eprim prim,[e1;e2]) when not (isval e1)  ->
+  Eapply(Eprim prim,[(eval1 e1);e2])
+| Eapply(Eprim prim,[e1;e2]) when not (isval e2)  ->
+  Eapply(Eprim prim,[e1;(eval1 e2)])
 | Eapply(Eprim prim,[e1;e2]) ->
   eval_prim_binary prim e1 e2
 | Eapply(e,l) when not (isval e) ->
@@ -234,4 +323,4 @@ let rec eval expr =
   else 
   try 
     eval expr
-  with _ -> failwith "eval"
+  with _ -> print_endline (show_expr expr);failwith "eval"

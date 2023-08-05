@@ -1,12 +1,10 @@
 let x = 5 in
-  x + 3;;
-(*
-let id x = x;;
+  x + (- 3);;
 
 type 'a option =
 | Some of 'a
 | None;;
-
+(*
 let apply f = function
 | Some x -> Some(f x)
 | None -> None;;
@@ -48,3 +46,8 @@ let x = [] in
 (function 
 | [] -> true) [];;
 
+[2] @ [5];;
+
+(function
+| Some a -> a
+| None -> 0) (Some 5);;
