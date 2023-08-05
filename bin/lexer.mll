@@ -42,6 +42,8 @@ rule token = parse
 | '\n'                { Lexing.new_line lexbuf; token lexbuf }
 | [' ' '\r' '\t']     { token lexbuf }
 | "(*"                { comment 0 lexbuf }
+| "true"              { BOOL true }
+| "false"             { BOOL false }
 | int                 { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | int_                { INT (int_of_string (Lexing.lexeme lexbuf)) }
 | float               { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
