@@ -1,6 +1,7 @@
 open Syntax
 open Typing
 open Globals
+open Core
 
 let rec check_valid_ty tyl = function
 | Tvar {contents=Unbound{id=id;level=_}} -> List.exists (occursin id) tyl
@@ -155,7 +156,8 @@ let rec check_ast = function
 | Defexpr expr::rest ->
   let ty = type_expr (get_tyenv ()) 0 expr in
   ignore ty;
-  print_endline (show_ty ty);
+  let expr = eval expr in
+  print_endline (show_expr expr ^ ": "^ show_ty ty);
   check_ast rest
 | Deflet l::rest ->
   let add_env = type_let (get_tyenv ()) l in

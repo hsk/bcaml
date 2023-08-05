@@ -1,6 +1,5 @@
-open Syntax
+(*open Syntax*)
 open Defs
-open Core 
 
 let () =
   let argc = Array.length Sys.argv in
@@ -14,8 +13,7 @@ let () =
   let filebuf = Lexing.from_channel inchan in
   try
     let ast = Parser.top Lexer.token filebuf in
-    check_ast ast;
-    print_endline (show_def_list ast)
+    check_ast ast
   with
   | Failure msg -> print_endline msg
   | Parser.Error -> print_endline "parser error"

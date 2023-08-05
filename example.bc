@@ -1,4 +1,4 @@
-let x = 5 in
+(*let x = 5 in
   x + 3;;
 
 let id x = x;;
@@ -38,4 +38,12 @@ let gen_id () =
   ret
 ;;
 
-let is_same = fun x y -> x ;;
+let is_same = fun x y -> x ;;*)
+
+let x = [] in
+  5::x;;
+
+(fun x y-> x) 5 0;;
+
+(function 
+| [] -> true) [];;
