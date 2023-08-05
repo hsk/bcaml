@@ -106,6 +106,7 @@ rule token = parse
 | "and" { AND }
 | "else" { ELSE }
 | "function" { FUNCTION }
+| "when"  { WHEN }
 | "fun" { FUN }
 | "if" { IF }
 | "in" { IN }

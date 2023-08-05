@@ -369,7 +369,10 @@ let type_prim level = function
 | Bconcat -> 
   let tvar = new_type_var level in
   Tarrow(Tlist tvar,(Tarrow(Tlist tvar,Tlist tvar)))
-
+| Bfailwith ->
+  let tvar = new_type_var level in
+  Tarrow(Tstring,tvar)
+  
 let rec type_patt level new_env pat ty =
   match pat with
   | Pwild -> new_env

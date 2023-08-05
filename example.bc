@@ -23,11 +23,11 @@ type 'a obj = {data:'a};;
 
 type 'a a =
 | X of int * int;;
-(*
+
 let rec length n = function
 | [] -> n
 | _::rest -> length (n+1) rest in length 0;;*)
-
+(*
 let curr_id = ref 0;;
 
 let gen_id () =
@@ -49,5 +49,9 @@ let x = [] in
 [2] @ [5];;
 
 (function
-| Some a -> a
-| None -> 0) (Some 5);;
+| Some a when a = 5 -> a
+| None -> failwith "None") (Some 5);;
+
+let id = ref 0 in
+id := !id + 1;
+!id;;

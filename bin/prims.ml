@@ -39,6 +39,7 @@ type prim =
 | Bstringoffloat
 | Bfloatofstring
 | Bconcat
+| Bfailwith
 [@@deriving show]
 
 let prim_list = [
@@ -81,7 +82,8 @@ let prim_list = [
 ("int_of_string",Bintofstring);
 ("string_of_float",Bstringoffloat);
 ("float_of_string",Bfloatofstring);
-("@",Bconcat)
+("@",Bconcat);
+("failwith",Bfailwith)
 ]
 
 let is_unary = function
@@ -96,7 +98,8 @@ let is_unary = function
 | Bstringofint
 | Bintofstring
 | Bstringoffloat
-| Bfloatofstring -> true
+| Bfloatofstring
+| Bfailwith -> true
 | _ -> false
 
 let is_binary prim = not (is_unary prim)

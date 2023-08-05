@@ -1,6 +1,8 @@
 open Prims
 open Syntax
 
+exception InterpreterError of string
+
 type ctx = (string *expr) list 
 
 let ctx = ref (List.map (fun (n,p) ->(n,Eprim p)) prim_list)
@@ -52,8 +54,8 @@ let rec isval = function
 | Econdition _ -> false
 | Econstraint(expr,_) -> isval expr
 | Erecord l -> List.for_all isval (List.map snd l)
-| Erecord_access _
-| Ewhen _ -> false
+| Erecord_access _ -> false
+| Ewhen _ -> true
 
 let rec subst expr name expr' = 
 match expr with
@@ -83,45 +85,6 @@ match expr with
 | Erecord_access(expr,label) -> Erecord_access(subst expr name expr',label)
 | Ewhen(lhs,rhs) -> Ewhen(subst lhs name expr',subst rhs name expr')
 
-let rec eval_match pat expr expr'=
- match (pat,expr') with
-| (Pwild,_) -> expr
-| (Pvar name,_) -> subst expr name expr'
-| (Pparams [p],_) -> eval_match p expr expr'
-| (Pparams(p::pl),_) -> Efunction((Pparams(pl),eval_match p expr expr')::[])
-| (Palias(p,name),_) -> eval_match p (subst expr name expr') expr'
-| (Pconstant cst1,Econstant cst2) when cst1 = cst2 -> expr
-| (Ptuple pl,Etuple el) -> List.fold_left2 (fun e p e'-> eval_match p e e') expr pl el
-| (Pnil,Elist []) -> expr
-| (Pcons(car,cdr), Elist (e::el)) -> eval_match cdr (eval_match car expr e) (Elist el)
-| (Pref p,Eloc loc) -> eval_match p expr (lookuploc loc)
-| (Punit,Eunit)
-| (Ptag,Etag) -> expr
-| (Pconstruct(name1,pat),Econstruct(name2,expr')) when name1 = name2 ->
-  eval_match pat expr expr'
-| (Por(p1,p2),_) ->
-  begin
-    try 
-      eval_match p1 expr expr'
-    with
-    | Failure _ -> eval_match p2 expr expr'
-  end
-| (Pconstraint(p,_),_) -> eval_match p expr expr'
-| (Precord pf,Erecord ef) ->
-  List.fold_left (fun e p-> eval_match (snd p) e (List.assoc (fst p) ef)) expr pf
-| _ -> failwith "eval_match"
-
-let rec eval_matches pat_exprs expr' =
-  match pat_exprs with 
-  | (p,e)::l -> 
-    begin
-      try 
-        eval_match p e expr'
-      with _ ->
-        eval_matches l expr'
-    end
-  | _ -> failwith "eval_matches"
-
 let eval_prim_unary prim x =
 match prim with
 | Bnot -> do_bool (not) x
@@ -136,6 +99,7 @@ match prim with
 | Bintofstring -> do_string_to_int int_of_string x
 | Bstringoffloat -> do_float_to_string string_of_float x
 | Bfloatofstring -> do_string_to_float float_of_string x
+| Bfailwith -> raise  (InterpreterError (get_string (get_constant x)))
 | _ -> failwith "ecal_prim_unary"
 
 let eval_prim_binary prim x y =
@@ -246,7 +210,57 @@ match prim with
   end
 | _ -> failwith "eval_prim_binary"
 
-let rec eval1 = function
+
+let rec eval_match pat expr expr'=
+ match (pat,expr') with
+| (Pwild,_) -> expr
+| (Pvar name,_) -> subst expr name expr'
+| (Pparams [p],_) -> eval_match p expr expr'
+| (Pparams(p::pl),_) -> Efunction((Pparams(pl),eval_match p expr expr')::[])
+| (Palias(p,name),_) -> eval_match p (subst expr name expr') expr'
+| (Pconstant cst1,Econstant cst2) when cst1 = cst2 -> expr
+| (Ptuple pl,Etuple el) -> List.fold_left2 (fun e p e'-> eval_match p e e') expr pl el
+| (Pnil,Elist []) -> expr
+| (Pcons(car,cdr), Elist (e::el)) -> eval_match cdr (eval_match car expr e) (Elist el)
+| (Pref p,Eloc loc) -> eval_match p expr (lookuploc loc)
+| (Punit,Eunit)
+| (Ptag,Etag) -> expr
+| (Pconstruct(name1,pat),Econstruct(name2,expr')) when name1 = name2 ->
+  eval_match pat expr expr'
+| (Por(p1,p2),_) ->
+  begin
+    try 
+      eval_match p1 expr expr'
+    with
+    | Failure _ -> eval_match p2 expr expr'
+  end
+| (Pconstraint(p,_),_) -> eval_match p expr expr'
+| (Precord pf,Erecord ef) ->
+  List.fold_left (fun e p-> eval_match (snd p) e (List.assoc (fst p) ef)) expr pf
+| _ -> failwith "eval_match"
+
+and eval_matches pat_exprs expr' =
+  match pat_exprs with 
+  | (p,e)::l -> 
+    begin
+      try 
+        let expr = eval_match p e expr' in
+        match expr with
+        | Ewhen(flag,expr) ->
+          begin match eval flag with
+          | Econstant (Cbool true) ->
+            expr
+          | _ ->
+            eval_matches l expr'
+          end
+        | _ -> expr
+      with _ ->
+        eval_matches l expr'
+    end
+  | [] -> failwith "eval_matches"
+
+
+and eval1 = function
 | Evar name -> lookupcontext name
 | Eprim prim when is_unary prim ->
   Efunction [(Pvar "A",Eapply(Eprim prim,[Evar "A"]))]
@@ -315,12 +329,11 @@ let rec eval1 = function
 | expr when (isval expr) -> expr
 | expr -> print_endline (show_expr expr);failwith "eval1"
 
-
-let rec eval expr =
+and eval expr =
   let expr = eval1 expr in
   if isval expr then
     expr
   else 
   try 
     eval expr
-  with _ -> print_endline (show_expr expr);failwith "eval"
+  with Failure _ -> print_endline (show_expr expr);failwith "eval"

@@ -1,5 +1,6 @@
 (*open Syntax*)
 open Defs
+open Core
 
 let () =
   let argc = Array.length Sys.argv in
@@ -15,6 +16,7 @@ let () =
     let ast = Parser.top Lexer.token filebuf in
     check_ast ast
   with
+  | InterpreterError msg -> print_endline ("InterpreterError " ^ msg)
   | Failure msg -> print_endline msg
   | Parser.Error -> print_endline "parser error"
   | _ -> print_endline "something went wrong"
