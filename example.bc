@@ -1,6 +1,6 @@
-let x = 5 in
+(*let x = 5 in
   x + (- 3);;
-
+*)
 type 'a option =
 | Some of 'a
 | None;;
@@ -23,10 +23,10 @@ type 'a obj = {data:'a};;
 
 type 'a a =
 | X of int * int;;
-
+*)
 let rec length n = function
 | [] -> n
-| _::rest -> length (n+1) rest in length 0;;*)
+| _::rest -> length (n+1) rest in length 0 (1::2::[]);;
 (*
 let curr_id = ref 0;;
 
@@ -37,7 +37,7 @@ let gen_id () =
 ;;
 
 let is_same = fun x y -> x ;;
-*)
+*)(*)
 let x = [] in
   3::x;;
 
@@ -54,4 +54,4 @@ let x = [] in
 
 let id = ref 0 in
 id := !id + 1;
-!id;;
+!id;;*)

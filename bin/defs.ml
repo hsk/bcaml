@@ -161,7 +161,7 @@ let rec check_ast = function
 | Deflet l::rest ->
   let add_env = type_let (get_tyenv ()) l in
   push_tyenv add_env;
-  (*print_endline (show_tyenv add_env);*)
+  print_endline (show_matches l);
   check_ast rest
 | Defletrec l::rest ->
   let add_env = type_letrec (get_tyenv ()) l in

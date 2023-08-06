@@ -60,6 +60,7 @@ and expr =
 | Eapply of expr * expr list
 | Elet of (pat * expr) list * expr
 | Eletrec of (pat * expr) list * expr
+| Efix of pat * expr
 | Efunction of (pat * expr) list
 | Esequence of expr * expr
 | Econdition of expr * expr * expr
@@ -101,6 +102,10 @@ and def =
 | Deftype of type_decl list
 [@@deriving show]
 
+and matches =
+(pat * expr) list
+[@@deriving show]
+
 and def_list = def list
 [@@deriving show]
 
@@ -135,6 +140,10 @@ let do_int op = function
 | Econstant(Cint i) -> Econstant(Cint(op i))
 | _ -> failwith "do_int"
 
+let do_int_to_float op = function
+| Econstant(Cint i) -> Econstant(Cfloat(op i))
+| _ -> failwith "do_int_to_float"
+
 let do_int_to_char op = function
 | Econstant(Cint i) -> Econstant(Cchar(op i))
 | _ -> failwith "do_int_to_char"
@@ -154,6 +163,10 @@ let do_bool_to_string op = function
 let do_float op = function
 | Econstant(Cfloat f) -> Econstant(Cfloat(op f))
 | _ -> failwith "do_float"
+
+let do_float_to_int op = function
+| Econstant(Cfloat f) -> Econstant(Cint(op f))
+| _ -> failwith "do_float_to_int"
 
 let do_float_to_string op = function
 | Econstant(Cfloat f) -> Econstant(Cstring(op f))

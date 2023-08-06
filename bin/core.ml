@@ -49,6 +49,7 @@ let rec isval = function
 | Eapply _ 
 | Elet _
 | Eletrec _ -> false
+| Efix _ -> false
 | Efunction _ -> true
 | Esequence _ -> false
 | Econdition _ -> false
@@ -77,6 +78,7 @@ match expr with
 | Eapply(expr,l) -> Eapply(subst expr name expr',List.map (fun e->subst e name expr') l)
 | Elet (l,expr) -> Elet(List.map (fun pe -> (fst pe, subst (snd pe) name expr')) l, subst expr name expr')
 | Eletrec(l,expr) -> Eletrec(List.map (fun pe -> (fst pe, subst (snd pe) name expr')) l, subst expr name expr')
+| Efix(p,e) -> Efix(p,e)
 | Efunction l -> Efunction(List.map (fun pe -> (fst pe, subst (snd pe) name expr')) l)
 | Esequence(lhs,rhs) -> Esequence(subst lhs name expr',subst rhs name expr')
 | Econdition(expr1,expr2,expr3)-> Econdition(subst expr1 name expr',subst expr2 name expr',subst expr3 name expr')
@@ -91,6 +93,8 @@ match prim with
 | Bnegint -> do_int (~-) x
 | Blnot -> do_int (lnot) x
 | Bnegfloat -> do_float (~-.) x
+| Bintoffloat -> do_float_to_int int_of_float x
+| Bfloatofint -> do_int_to_float float_of_int x
 | Bintofchar -> do_char_to_int int_of_char x
 | Bcharofint -> do_int_to_char char_of_int x
 | Bstringofbool -> do_bool_to_string string_of_bool x
@@ -305,9 +309,12 @@ and eval1 = function
   Eapply(eval_matches pat_exprs e,el)
 | Elet(pat_exprs,expr) ->
   List.fold_left (fun e (p,e') -> eval_match p e (eval1 e')) expr pat_exprs
-(*
-| Eletrec of (pat * expr) list * expr
-*)
+| Eletrec(pat_exprs,expr) ->
+  List.fold_left (fun e (p,e') -> eval_match p e (eval1  e')) expr pat_exprs
+| Efix(p,e) when not (isval e)  ->
+  Efix(p,eval1 e)
+| Efix(p,e)  ->
+  eval_match p e (Efix(p,e) )
 | Esequence(lhs,rhs) when not (isval lhs) ->
   Esequence(eval1 lhs,rhs)
 | Esequence(Eunit,rhs) ->

@@ -30,6 +30,8 @@ type prim =
 | Bdivfloat
 | Bpower
 | Bconcatstring
+| Bintoffloat
+| Bfloatofint
 | Bintofchar
 | Bcharofint
 | Bstringofbool
@@ -74,6 +76,8 @@ let prim_list = [
 ("/.",Bdivfloat);
 ("**",Bpower);
 ("^",Bconcatstring);
+("int_of_float",Bintoffloat);
+("float_of_int",Bfloatofint);
 ("int_of_char",Bintofchar);
 ("char_of_int",Bcharofint);
 ("string_of_bool",Bstringofbool);
@@ -91,6 +95,8 @@ let is_unary = function
 | Bnegint
 | Blnot
 | Bnegfloat
+| Bintoffloat
+| Bfloatofint
 | Bintofchar
 | Bcharofint
 | Bstringofbool

@@ -316,6 +316,7 @@ let rec is_simple = function
 | Eapply _ -> false
 | Elet(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
 | Eletrec(l, body) -> List.for_all is_simple (List.map snd l) && is_simple body
+| Efix _ -> true
 | Efunction _ -> true
 | Esequence(expr1,expr2) -> is_simple expr1 && is_simple expr2
 | Econdition(_,ifso,ifelse) -> is_simple ifso && is_simple ifelse
@@ -358,6 +359,8 @@ let type_prim level = function
 | Bdivfloat
 | Bpower -> Tarrow(Tfloat,Tarrow(Tfloat,Tfloat))
 | Bconcatstring -> Tarrow(Tstring,Tarrow(Tstring,Tstring))
+| Bintoffloat -> Tarrow(Tfloat,Tint)
+| Bfloatofint -> Tarrow(Tint,Tfloat)
 | Bintofchar -> Tarrow(Tchar,Tint)
 | Bcharofint -> Tarrow(Tint,Tchar)
 | Bstringofbool -> Tarrow(Tbool,Tstring)
@@ -372,7 +375,7 @@ let type_prim level = function
 | Bfailwith ->
   let tvar = new_type_var level in
   Tarrow(Tstring,tvar)
-  
+
 let rec type_patt level new_env pat ty =
   match pat with
   | Pwild -> new_env
@@ -554,6 +557,11 @@ and type_expr env level = function
       if is_simple expr then generalize level ty
     ) tyl pat_expr;
   type_expr (add_env@env) level body
+| Efix(_,e) ->
+  (*let ty = new_type_var level in
+  unify (type_expr env level e) (Tarrow(ty,ty));
+  ty*)
+  type_expr env level e
 | Efunction l -> 
   begin match l with
   | [] -> failwith "empty function"

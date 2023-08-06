@@ -161,9 +161,10 @@ let_def:
 
 let_rec_def:
 | ident nonempty_list(simple_pat) EQ expr
-    { (Pvar $1,Efunction((Pparams $2,$4)::[])) }
+    { (Pvar $1,Efix(Pvar $1,Efunction((Pparams $2,$4)::[]))) }
+    
 | ident nonempty_list(simple_pat) COLON ty EQ expr
-    { (Pvar $1,Efunction((Pparams $2,Econstraint($6,$4))::[])) }
+    { (Pvar $1,Efix (Pvar $1,Efunction((Pparams $2,Econstraint($6,$4))::[]))) }
 
 pat: 
 | simple_pat
