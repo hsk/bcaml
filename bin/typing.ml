@@ -632,7 +632,6 @@ and validate_variant_expr env level (tag_name,expr) =
   let fields = subst_ty_to_tvar_in_fields fields (new_type_var level) in
   let ty = List.assoc tag_name fields in
   unify ty (type_expr env level expr);
-  print_endline (show_tyenv fields);
   fields
 
 let type_let env pat_expr =

@@ -112,6 +112,50 @@ and def_list = def list
 type tyenv = (string * ty) list
 [@@deriving show]
 
+let rec pp_ty = function
+| Tvar{contents=Unbound {id=id;level=_}} -> show_id_kind id
+| Tvar{contents=Linkto ty} -> pp_ty ty
+| Tunit -> "unit"
+| Tbool -> "bool"
+| Tint  -> "int"
+| Tfloat -> "float"
+| Tchar -> "char"
+| Tstring -> "string"
+| Tlist ty -> (pp_ty ty) ^ " list"
+| Tref ty -> (pp_ty ty) ^ " ref"
+| Tarrow(l,r) -> "(" ^ (pp_ty l) ^ "->" ^ (pp_ty r) ^ ")"
+| Ttuple(x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") "
+| Tconstr(name, []) -> name
+| Tconstr(name, x::[]) -> (pp_ty x) ^ " " ^ name
+| Tconstr(name, x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
+| Trecord(name,_) -> name
+| Tvariant(name,_) -> name
+| _ -> failwith "pp_ty"
+
+let pp_cst = function
+| Cint i -> string_of_int i
+| Cbool b -> string_of_bool b 
+| Cfloat f -> string_of_float f 
+| Cchar c -> Printf.sprintf "'%C'" c
+| Cstring s -> Printf.sprintf "\"%s\"" s
+
+let rec pp_exp = function
+| Econstant cst -> pp_cst cst
+| Eprim _ -> "<fun>"
+| Etuple(x::xl) -> "(" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_exp x)) "" xl) ^ ")"
+| Elist [] -> "[]"
+| Elist(x::[]) -> "[" ^ (pp_exp x) ^ "]"
+| Elist(x::xl) -> "[" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ ";" ^ (pp_exp x)) "" xl) ^ "]"
+| Eloc _ -> "<ref>"
+| Eunit -> "()"
+| Econstruct(name,Etag) -> name
+| Econstruct(name,expr) -> name ^ "(" ^ (pp_exp expr) ^ ")" 
+| Efix _ -> "<fun>"
+| Efunction _ -> "<fun>"
+| Erecord((n,x)::[]) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ "}"
+| Erecord((n,x)::xl) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ (List.fold_left (fun s (n,x) -> s ^ ";" ^ n ^ "=" ^ (pp_exp x)) "" xl) ^ "}"
+| _ -> failwith "pp_exp"
+ 
 let get_constant = function
 | Econstant cst -> cst
 | _ -> failwith "get_constant"
