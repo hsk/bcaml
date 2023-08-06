@@ -26,7 +26,7 @@ type 'a a =
 *)
 let rec length n = function
 | [] -> n
-| _::rest -> length (n+1) rest in length 0 (1::2::[]);;
+| _::rest -> length (n+1) rest in length 0 [1;2;3;4;5];;
 (*
 let curr_id = ref 0;;
 

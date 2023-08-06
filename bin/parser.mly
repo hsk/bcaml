@@ -84,7 +84,7 @@ expr:
     { Elet($2,$4) }
 | LET REC separated_nonempty_list(AND, let_rec_def) IN expr
     { Eletrec($3,$5) }
-| expr SEMI expr  { Esequence($1,$3) }
+| expr SEMI expr { Esequence($1,$3) }
 | IF expr THEN expr ELSE expr
     { Econdition($2,$4,$6) }
 | expr binop expr  { Eapply(Evar $2,$1::$3::[]) }
@@ -106,7 +106,7 @@ simple_expr_:
 | ident { Evar $1 }
 | const_expr { Econstant $1 }
 | LBRACK RBRACK { Enil }
-| LBRACK expr_semi_list RBRACK { $2 }
+| LBRACK expr_semi_list RBRACK { List.fold_left (fun cdr car -> Econs(car,cdr)) Enil $2 }
 | LBRACE expr_label_list RBRACE { Erecord $2 }
 | LPAREN RPAREN { Eunit }
 | LPAREN expr COMMA separated_nonempty_list(COMMA,expr) RPAREN
@@ -117,15 +117,15 @@ simple_expr_:
 | simple_expr DOT LID { Erecord_access($1,$3) }
 
 expr_semi_list:
-| expr_semi_list SEMI expr %prec prec_list 
-  { Econs($1,$3) }
+| expr_semi_list SEMI expr %prec prec_list
+  { $3::$1 }
 | expr %prec prec_list
-  { Econs($1,Enil) }
+  { [$1] }
 
 expr_label_list:
-| expr_label_list SEMI field EQ expr %prec prec_list
+| expr_label_list SEMI field EQ expr
   { ($3,$5)::$1 }
-| field EQ expr %prec prec_list
+| field EQ expr
   { ($1,$3)::[] }
   
 
@@ -183,7 +183,7 @@ comma_pat:
     { $1::$3 }
 
 pat_semi_list:
-| pat_semi_list SEMI pat 
+| pat SEMI pat_semi_list 
   { Pcons($1,$3) }
 | pat
   { Pcons($1,Pnil) }
