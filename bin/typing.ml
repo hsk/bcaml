@@ -409,7 +409,6 @@ let rec type_patt level new_env pat ty =
     let new_env = type_patt level new_env car ty1 in
     let new_env = type_patt level new_env cdr ty2 in
     unify (Tlist ty1) ty2;
-    print_endline (show_ty ty);
     unify ty2 ty;
     new_env
   | Pref expr ->

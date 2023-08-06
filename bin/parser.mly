@@ -160,6 +160,9 @@ let_def:
     { (Pvar $1,Efunction((Pparams $2,Econstraint($6,$4))::[])) }
 
 let_rec_def:
+| ident EQ expr
+    { (Pvar $1,Efix(Pvar $1,$3)) }
+    
 | ident nonempty_list(simple_pat) EQ expr
     { (Pvar $1,Efix(Pvar $1,Efunction((Pparams $2,$4)::[]))) }
     
