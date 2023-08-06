@@ -233,6 +233,33 @@ let rec eval_match pat expr expr'=
   List.fold_left (fun e p-> eval_match (snd p) e (List.assoc (fst p) ef)) expr pf
 | _ -> failwith "eval_match"
 
+let rec eval_match' pat expr =
+ match (pat,expr) with
+| (Pwild,_) -> ()
+| (Pvar name,_) -> extendcontext name expr
+| (Pparams(p::_),_) -> eval_match' p expr
+| (Palias(p,name),_) -> extendcontext name expr;eval_match' p expr
+| (Pconstant cst1,Econstant cst2) when cst1 = cst2 -> ()
+| (Ptuple pl,Etuple el) -> List.iter2 (fun p e-> eval_match' p e) pl el
+| (Pnil,Elist []) -> ()
+| (Pcons(car,cdr), Elist (e::el)) -> eval_match' car e; eval_match' cdr (Elist el) 
+| (Pref p,Eloc loc) -> eval_match' p (lookuploc loc)
+| (Punit,Eunit)
+| (Ptag,Etag) -> ()
+| (Pconstruct(name1,pat),Econstruct(name2,expr)) when name1 = name2 ->
+  eval_match' pat expr
+| (Por(p1,p2),_) ->
+  begin
+    try 
+      eval_match' p1 expr
+    with
+    | Failure _ -> eval_match' p2 expr
+  end
+| (Pconstraint(p,_),_) -> eval_match' p expr
+| (Precord pf,Erecord ef) ->
+  List.iter (fun p-> eval_match' (snd p) (List.assoc (fst p) ef)) pf
+| _ -> failwith "eval_match'"
+
 and eval_matches pat_exprs expr' =
   match pat_exprs with 
   | (p,e)::l -> 
@@ -253,7 +280,6 @@ and eval_matches pat_exprs expr' =
     end
   | [] -> raise (InterpreterError "no matching found")
 
-
 and eval1 = function
 | Evar name -> lookupcontext name
 | Eprim prim when is_unary prim ->
@@ -272,7 +298,7 @@ and eval1 = function
 | Eassign(lhs,rhs) when not (isval lhs) ->
   Eassign(eval1 lhs,rhs)
 | Eassign(lhs,rhs) when not (isval rhs) ->
-    Eassign(lhs,eval1 rhs)
+  Eassign(lhs,eval1 rhs)
 | Eassign(Eloc l,rhs) ->
   updatestore l rhs;Eunit
 | Econstruct(name,expr) when isval expr ->
@@ -298,9 +324,9 @@ and eval1 = function
 | Eapply(Efunction pat_exprs,e::el) ->
   Eapply(eval_matches pat_exprs e,el)
 | Elet(pat_exprs,expr) ->
-  List.fold_left (fun e (p,e') -> eval_match p e (eval1 e')) expr pat_exprs
+  List.fold_left (fun e (p,e') -> eval_match p e (eval e')) expr pat_exprs
 | Eletrec(pat_exprs,expr) ->
-  List.fold_left (fun e (p,e') -> eval_match p e (eval1  e')) expr pat_exprs
+  List.fold_left (fun e (p,e') -> eval_match p e (eval  e')) expr pat_exprs
 | Efix(p,e) when not (isval e)  ->
   Efix(p,eval1 e)
 | Efix(p,e)  ->
@@ -334,3 +360,10 @@ and eval expr =
   try 
     eval expr
   with Failure _ -> print_endline (show_expr expr);failwith "eval"
+
+let eval_let pat_exprs =
+  List.iter (fun (p,e) -> eval_match' p e) pat_exprs
+
+
+let eval_letrec pat_exprs =
+  List.iter (fun (p,e) -> eval_match' p e) pat_exprs
