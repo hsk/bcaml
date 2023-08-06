@@ -92,6 +92,8 @@ rule token = parse
 | "lsr" { LSR }
 | "asr" { ASR }
 
+| "==" { EQIMM }
+| "!=" { NQIMM }
 | "=" { EQ }
 | "<>" { NQ }
 | "<" { LT }

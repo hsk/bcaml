@@ -106,28 +106,36 @@ match prim with
 | Bfailwith -> raise  (InterpreterError (get_string (get_constant x)))
 | _ -> failwith "ecal_prim_unary"
 
+let rec eval_prim_eq x y = match (x,y) with
+| (Econstant l, Econstant r) -> l = r
+| (Etuple l, Etuple r) -> List.for_all2 eval_prim_eq l r
+| (Elist l, Elist r) -> List.for_all2 eval_prim_eq l r
+| (Eloc l, Eloc r) -> eval_prim_eq (lookuploc l) (lookuploc r)
+| (Etag, Etag) -> true
+| (Eunit, Eunit) -> true
+| (Econstruct(ln,l), Econstruct(rn,r)) when ln = rn -> eval_prim_eq l r
+| (Erecord ls, Erecord rs) -> List.for_all (fun (n,e) -> eval_prim_eq (List.assoc n ls) e) rs
+| (Eprim _, Eprim _) -> raise (InterpreterError "comparison between functions")
+| (Efunction _, Efunction _) -> raise (InterpreterError "comparison between functions")
+| (_,_) -> failwith "eval_prim_eq"
+
+let rec eval_prim_eq_imm x y = match (x,y) with
+| (Econstant l, Econstant r) -> l = r
+| (Etuple l, Etuple r) -> List.for_all2 eval_prim_eq_imm l r
+| (Elist l, Elist r) -> List.for_all2 eval_prim_eq_imm l r
+| (Eloc l, Eloc r) -> l = r
+| (Etag, Etag) -> true
+| (Eunit, Eunit) -> true
+| (Econstruct(ln,l), Econstruct(rn,r)) when ln = rn -> eval_prim_eq_imm l r
+| (Erecord ls, Erecord rs) -> List.for_all (fun (n,e) -> eval_prim_eq_imm (List.assoc n ls) e) rs
+| (Eprim _, Eprim _) -> raise (InterpreterError "comparison between functions")
+| (Efunction _, Efunction _) -> raise (InterpreterError "comparison between functions")
+| (_,_) -> failwith "eval_prim_eq"
+
 let eval_prim_binary prim x y =
 match prim with
-| Beq ->
-  let ret =
-  match get_constant x, get_constant y with
-  | Cint x, Cint y -> Cbool((=) x y)
-  | Cbool x, Cbool y -> Cbool((=) x y)
-  | Cfloat x, Cfloat y -> Cbool((=) x y)
-  | Cstring x, Cstring y -> Cbool((=) x y)
-  | Cchar x, Cchar y -> Cbool((=) x y)
-  | _ -> failwith "eval_prim_binary"
-  in Econstant ret
-| Bnq ->
-  let ret =
-  match get_constant x, get_constant y with
-  | Cint x, Cint y -> Cbool((<>) x y)
-  | Cbool x, Cbool y -> Cbool((<>) x y)
-  | Cfloat x, Cfloat y -> Cbool((<>) x y)
-  | Cstring x, Cstring y -> Cbool((<>) x y)
-  | Cchar x, Cchar y -> Cbool((<>) x y)
-  | _ -> failwith "eval_prim_binary"
-  in Econstant ret
+| Beq -> Econstant (Cbool (eval_prim_eq x y)) 
+| Bnq -> Econstant (Cbool (not (eval_prim_eq x y)))
 | Blt ->
   let ret =
   match get_constant x, get_constant y with
@@ -168,26 +176,8 @@ match prim with
   | Cchar x, Cchar y -> Cbool((>=) x y)
   | _ -> failwith "eval_prim_binary"
   in Econstant ret
-| Beqimm ->
-  let ret =
-  match get_constant x, get_constant y with
-  | Cint x, Cint y -> Cbool((==) x y)
-  | Cbool x, Cbool y -> Cbool((==) x y)
-  | Cfloat x, Cfloat y -> Cbool((==) x y)
-  | Cstring x, Cstring y -> Cbool((==) x y)
-  | Cchar x, Cchar y -> Cbool((==) x y)
-  | _ -> failwith "eval_prim_binary"
-  in Econstant ret
-| Bnqimm ->  
-  let ret =
-  match get_constant x, get_constant y with
-  | Cint x, Cint y -> Cbool((!=) x y)
-  | Cbool x, Cbool y -> Cbool((!=) x y)
-  | Cfloat x, Cfloat y -> Cbool((!=) x y)
-  | Cstring x, Cstring y -> Cbool((!=) x y)
-  | Cchar x, Cchar y -> Cbool((!=) x y)
-  | _ -> failwith "eval_prim_binary"
-  in Econstant ret
+| Beqimm -> Econstant (Cbool (eval_prim_eq_imm x y)) 
+| Bnqimm -> Econstant (Cbool (not (eval_prim_eq_imm x y)))
 | Band -> do_bool_bin (&&) x y
 | Bor -> do_bool_bin (||) x y
 | Baddint -> do_int_bin (+) x y
@@ -261,7 +251,7 @@ and eval_matches pat_exprs expr' =
       with _ ->
         eval_matches l expr'
     end
-  | [] -> failwith "eval_matches"
+  | [] -> raise (InterpreterError "no matching found")
 
 
 and eval1 = function

@@ -37,7 +37,7 @@ let gen_id () =
 ;;
 
 let is_same = fun x y -> x ;;
-*)(*)
+*)
 let x = [] in
   3::x;;
 
@@ -54,4 +54,8 @@ let x = [] in
 
 let id = ref 0 in
 id := !id + 1;
-!id;;*)
+!id;;
+
+type x = {data:int};;
+
+{data=5}=={data=5};;

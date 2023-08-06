@@ -22,7 +22,7 @@
 %token IF THEN ELSE WHEN
 %token REF DEREF ASSIGN
 %token AT
-%token EQ NQ LT GT LE GE
+%token EQ NQ LT GT LE GE EQIMM NQIMM
 %token PLUS PLUSDOT
 %token STAR STARDOT STARSTAR
 %token MINUS MINUSDOT
@@ -44,7 +44,7 @@
 %left BAR
 %left BARBAR
 %left AMPERAMPER
-%left EQ NQ LT GT LE GE 
+%left EQ NQ LT GT LE GE EQIMM NQIMM
 %right AT
 %right CONS
 %left  PLUS PLUSDOT MINUS MINUSDOT
@@ -162,7 +162,7 @@ let_def:
 let_rec_def:
 | ident EQ expr
     { (Pvar $1,Efix(Pvar $1,$3)) }
-    
+
 | ident nonempty_list(simple_pat) EQ expr
     { (Pvar $1,Efix(Pvar $1,Efunction((Pparams $2,$4)::[]))) }
     
@@ -251,6 +251,10 @@ ident:
     { "<=" }
 | GE
     { ">=" }
+| EQIMM
+    { "==" }
+| NQIMM
+    { "!=" }
 | AT
     { "@" }
 | PLUS
