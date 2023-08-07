@@ -11,9 +11,9 @@ let rec check_valid_ty tyl = function
 | Tarrow(arg,ret) -> check_valid_ty tyl arg && check_valid_ty tyl ret
 | Ttuple tyl' -> List.for_all (fun t->check_valid_ty tyl t) tyl'
 | Tconstr(_,tyl') -> List.for_all (fun t->check_valid_ty tyl t) tyl'
-| Trecord(_,fields) ->
+| Trecord(_,_,fields) ->
     check_valid_fields tyl fields
-| Tvariant(_,fields) -> 
+| Tvariant(_,_,fields) -> 
     check_valid_fields tyl fields
 | _ -> true
 
@@ -96,18 +96,18 @@ let rec def_found_in_ty decl seen = function
 | Tlist t -> def_found_in_ty decl seen t
 | Tarrow(arg,ret) -> def_found_in_ty decl seen arg; def_found_in_ty decl seen ret
 | Ttuple tyl -> List.iter (def_found_in_ty decl seen) tyl
-| Trecord(name,_) when name_is_checking name seen -> 
+| Trecord(name,_,_) when name_is_checking name seen -> 
   failwith (Printf.sprintf "recursive type definition %s" name)
-| Trecord(name,fields) when name_is_checked name seen -> 
+| Trecord(name,_,fields) when name_is_checked name seen -> 
   List.iter (def_found_in_ty decl seen) (List.map snd fields)
-| Trecord(name,fields) when is_def name decl ->
+| Trecord(name,_,fields) when is_def name decl ->
   def_found_in_decl name seen decl;
   List.iter (abbrev_found_in_ty decl seen) (List.map snd fields)
-| Tvariant(name,_) when name_is_checking name seen -> 
+| Tvariant(name,_,_) when name_is_checking name seen -> 
   failwith (Printf.sprintf "recursive type definition %s" name)
-| Tvariant(name,fields) when name_is_checked name seen -> 
+| Tvariant(name,_,fields) when name_is_checked name seen -> 
   List.iter (def_found_in_ty decl seen) (List.map snd fields)
-| Tvariant(name,fields) when is_def name decl ->
+| Tvariant(name,_,fields) when is_def name decl ->
   def_found_in_decl name seen decl;
   List.iter (def_found_in_ty decl seen) (List.map snd fields)
 | Tconstr(name,_) when is_def name decl ->

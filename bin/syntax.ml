@@ -37,8 +37,8 @@ and ty =
 | Tarrow of ty * ty
 | Ttuple of ty list
 | Tconstr of string * ty list
-| Trecord of string * (string * ty) list
-| Tvariant of string * (string * ty) list
+| Trecord of string * ty list * (string * ty) list
+| Tvariant of string * ty list * (string * ty) list
 | Ttag
 [@@deriving show]
 
@@ -128,8 +128,12 @@ let rec pp_ty = function
 | Tconstr(name, []) -> name
 | Tconstr(name, x::[]) -> (pp_ty x) ^ " " ^ name
 | Tconstr(name, x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
-| Trecord(name,_) -> name
-| Tvariant(name,_) -> name
+| Trecord(name,[],_) -> name
+| Trecord(name,x::[],_) -> (pp_ty x) ^ " " ^ name
+| Trecord(name,x::xl,_) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
+| Tvariant(name,[],_) -> name
+| Tvariant(name,x::[],_) -> (pp_ty x) ^ " " ^ name
+| Tvariant(name,x::xl,_) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
 | _ -> failwith "pp_ty"
 
 let pp_cst = function

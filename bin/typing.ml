@@ -27,7 +27,7 @@ let rec get_type_level ty =
   | Tlist ty | Tref ty -> get_type_level ty
   | Tarrow(arg,ret) -> min (get_type_level arg) (get_type_level ret)
   | Ttuple tyl | Tconstr(_,tyl) -> get_type_level_list tyl
-  | Trecord(_,fields) | Tvariant(_,fields) -> get_type_level_list (List.map snd fields)
+  | Trecord(_,_,fields) | Tvariant(_,_,fields) -> get_type_level_list (List.map snd fields)
   | Ttag -> None
 
 and get_type_level_list = function
@@ -51,7 +51,7 @@ let free_type_vars level ty =
     | Tlist ty | Tref ty -> free_vars ty
     | Tarrow(arg,ret) -> free_vars arg; free_vars ret
     | Ttuple tyl | Tconstr(_,tyl) -> List.iter free_vars tyl
-    | Trecord(_,fields) | Tvariant(_,fields) ->
+    | Trecord(_,_,fields) | Tvariant(_,_,fields) ->
       List.iter free_vars (List.map snd fields)
     | _ -> ()
   in free_vars ty;
@@ -72,8 +72,8 @@ let rec generalize level ty =
   | Tarrow(arg,ret) -> generalize level arg; generalize level ret
   | Ttuple tyl -> List.iter (generalize level) tyl
   | Tconstr(_,tyl) -> List.iter (generalize level) tyl
-  | Trecord(_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
-  | Tvariant(_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
+  | Trecord(_,_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
+  | Tvariant(_,_,fields) -> List.iter (fun (_,ty) -> generalize level ty) fields
   | _ -> ()
 
 let instantiate level ty =
@@ -99,8 +99,8 @@ let instantiate level ty =
     | Tarrow(arg,ret) -> Tarrow(f arg, f ret)
     | Ttuple tyl -> Ttuple(List.map f tyl)
     | Tconstr(name,tyl) -> Tconstr(name,List.map f tyl)
-    | Trecord(name,fields) -> Trecord(name,List.map (fun (n,ty) -> (n,f ty)) fields)
-    | Tvariant(name,fields) -> Tvariant(name,List.map (fun (n,ty) -> (n,f ty)) fields)
+    | Trecord(name,tyl,fields) -> Trecord(name,tyl,List.map (fun (n,ty) -> (n,f ty)) fields)
+    | Tvariant(name,tyl,fields) -> Tvariant(name,tyl,List.map (fun (n,ty) -> (n,f ty)) fields)
     | _ -> ty
   in f ty
 
@@ -114,7 +114,7 @@ let rec occursin id = function
 | Tref ty -> occursin id ty
 | Tarrow(arg,ret) -> occursin id arg || occursin id ret
 | Ttuple tyl | Tconstr(_,tyl) -> List.exists (occursin id) tyl
-| Trecord(_,fields) | Tvariant(_,fields) -> List.exists (occursin id) (List.map snd fields)
+| Trecord(_,_,fields) | Tvariant(_,_,fields) -> List.exists (occursin id) (List.map snd fields)
 | _ -> false
 
 let rec adjustlevel level = function
@@ -128,7 +128,7 @@ let rec adjustlevel level = function
 | Tref ty -> adjustlevel level ty
 | Tarrow(arg,ret) -> adjustlevel level arg; adjustlevel level ret
 | Ttuple tyl | Tconstr(_,tyl) -> List.iter (adjustlevel level) tyl
-| Trecord(_,fields) | Tvariant(_,fields) -> List.iter (adjustlevel level) (List.map snd fields)
+| Trecord(_,_,fields) | Tvariant(_,_,fields) -> List.iter (adjustlevel level) (List.map snd fields)
 | _ -> ()
 
 let rec unify ty1 ty2 =
@@ -147,9 +147,9 @@ let rec unify ty1 ty2 =
   | Ttuple tyl1, Ttuple tyl2 -> unify_list tyl1 tyl2
   | Tconstr(name1,tyl1), Tconstr(name2,tyl2) when name1 = name2 ->
     unify_list tyl1 tyl2
-  | Trecord(name1,fields1), Trecord(name2,fields2) when name1 = name2 ->
+  | Trecord(name1,_,fields1), Trecord(name2,_,fields2) when name1 = name2 ->
     unify_list (List.map snd fields1) (List.map snd fields2)
-  | Tvariant(name1,fields1), Tvariant(name2,fields2) when name1 = name2 -> 
+  | Tvariant(name1,_,fields1), Tvariant(name2,_,fields2) when name1 = name2 -> 
     unify_list (List.map snd fields1) (List.map snd fields2)
   | ty1,ty2 when ty1 = ty2 -> ()
   | _ -> failwith "Cannot unify types" 
@@ -166,10 +166,10 @@ let rec subst_ty t id ty =
   | Tarrow(arg,ret) -> Tarrow(subst_ty arg id ty, subst_ty ret id ty)
   | Ttuple tyl -> Ttuple(subst_ty_to_tyl tyl id ty)
   | Tconstr(name,tyl) -> Tconstr(name,subst_ty_to_tyl tyl id ty)
-  | Trecord(name,fields) ->
-    Trecord(name,subst_ty_to_fields fields id ty)
-  | Tvariant(name,fields) -> 
-    Tvariant(name,subst_ty_to_fields fields id ty)
+  | Trecord(name,tyl,fields) ->
+    Trecord(name,tyl,subst_ty_to_fields fields id ty)
+  | Tvariant(name,tyl,fields) -> 
+    Tvariant(name,tyl,subst_ty_to_fields fields id ty)
   | _ -> t
 
 and subst_ty_to_tyl tyl id ty =
@@ -182,10 +182,10 @@ let rec decl_to_ty name =
   let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,convert_constr(Trecord(n,fields)))
+    (tyl,convert_constr(Trecord(n,tyl,fields)))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,convert_constr(Tvariant(n,fields)))
+    (tyl,convert_constr(Tvariant(n,tyl,fields)))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
     (tyl,convert_constr ty)
@@ -239,17 +239,19 @@ and convert_constr ty =
   | Tref t -> Tref (convert_constr t)
   | Tarrow(arg,ret) -> Tarrow(convert_constr arg, convert_constr ret)
   | Ttuple tyl -> Ttuple(List.map convert_constr tyl)
-  | Trecord(name,fields) ->
-    Trecord(name,List.map (fun(n,t) -> (n,convert_constr t)) fields)
-  | Tvariant(name,fields) -> 
-    Tvariant(name,List.map (fun(n,t) -> (n,convert_constr t)) fields)
+  | Trecord(name,tyl,fields) ->
+    Trecord(name,tyl,List.map (fun(n,t) -> (n,convert_constr t)) fields)
+  | Tvariant(name,tyl,fields) -> 
+    Tvariant(name,tyl,List.map (fun(n,t) -> (n,convert_constr t)) fields)
   | _ -> ty
 
-let get_fields name =
+
+
+let get_fields ty =
   let fields =
-    match decl_to_ty name with
-    | _,Trecord(_,fields) -> fields
-    | _,Tvariant(_,fields) -> fields
+    match ty with
+    | Trecord(_,_,fields) -> fields
+    | Tvariant(_,_,fields) -> fields
     | _ -> failwith "not a record or variant type"
     in fields
 
@@ -259,7 +261,8 @@ let compare_label name (label1,_) (label2,_) =
   | _::xs -> aux label (n + 1) xs
   | [] -> failwith "label not found"
   in
-  let labels = List.map fst (get_fields name) in
+  let (_,ty) = decl_to_ty name in
+  let labels = List.map fst (get_fields ty) in
   let aux label = aux label 0 labels in
   aux label1 - aux label2
 
@@ -276,27 +279,6 @@ let tag_belong_to tag =
   | _::rest -> aux rest
   | _ -> failwith (Printf.sprintf "tag_belong_to %s" tag)
   in aux !modules.tydecls
-
-let rec subst_ty_to_tvar t ty =
-  match t with
-  | Tvar {contents=Unbound{id=_;level=_}} -> ty
-  | Tvar {contents=Linkto t} -> subst_ty_to_tvar t ty
-  | Tlist t -> Tlist (subst_ty_to_tvar t ty)
-  | Tref t -> Tref (subst_ty_to_tvar t ty)
-  | Tarrow(arg,ret) -> Tarrow(subst_ty_to_tvar arg ty, subst_ty_to_tvar ret ty)
-  | Ttuple tyl -> Ttuple(subst_ty_to_tvar_in_tyl tyl ty)
-  | Tconstr(name,tyl) -> Tconstr(name,subst_ty_to_tvar_in_tyl tyl ty)
-  | Trecord(name,fields) ->
-    Trecord(name,subst_ty_to_tvar_in_fields fields ty)
-  | Tvariant(name,fields) -> 
-    Tvariant(name,subst_ty_to_tvar_in_fields fields  ty)
-  | _ -> t
-
-and subst_ty_to_tvar_in_tyl tyl ty =
-  List.map (fun t -> subst_ty_to_tvar t ty) tyl
-
-and subst_ty_to_tvar_in_fields fields ty =
-  List.map (fun (s,t) -> (s,subst_ty_to_tvar t ty)) fields
 
 let rec is_simple = function
 | Evar _ -> true
@@ -441,7 +423,7 @@ let rec type_patt level new_env pat ty =
       failwith "invalid or pattern"
   | Pconstraint(pat,expected) ->
     let new_env = type_patt level new_env pat ty in
-    unify ty (subst_ty_to_tvar (convert_constr expected) (new_type_var level));
+    unify ty (instantiate level (convert_constr expected));
     new_env
   | Precord fields ->
     validate_record_pat new_env level fields ty
@@ -452,11 +434,12 @@ and type_pat level pat ty =
 and validate_record_pat env level fields ty =
   let first_label = fst (List.hd fields) in
   let record_name = label_belong_to first_label in
+  let record_ty = instantiate level (snd (decl_to_ty record_name)) in
   let fields1 = List.sort (compare_label record_name) fields in
-  let fields2 = subst_ty_to_tvar_in_fields (get_fields record_name) (new_type_var level) in
+  let fields2 = get_fields record_ty in
   if List.map fst fields1 = List.map fst fields2 then
     begin
-      unify (Trecord(record_name,fields2)) ty;
+      unify record_ty ty;
       List.fold_left2  (type_patt level) env (List.map snd fields1) (List.map snd fields2)
     end
   else
@@ -464,10 +447,9 @@ and validate_record_pat env level fields ty =
   
 and validate_variant_pat env level (tag_name,pat) ty =
   let variant_name = tag_belong_to tag_name in
-  let fields = get_fields variant_name in
-  let fields = subst_ty_to_tvar_in_fields fields (new_type_var level) in
-  unify ty (Tvariant(variant_name,fields));
-  let ty = List.assoc tag_name fields in
+  let (_,variant_ty) = decl_to_ty variant_name in
+  unify ty (instantiate level variant_ty);
+  let ty = List.assoc tag_name (get_fields variant_ty) in
   type_patt level env pat ty
 
 and type_expr env level = function
@@ -520,10 +502,9 @@ and type_expr env level = function
   Tunit
 | Etag -> Ttag
 | Econstruct(tag_name,expr) -> 
-  let variant_name = tag_belong_to tag_name in
-  let fields = validate_variant_expr env level (tag_name,expr) in
-  (*print_endline (show_tyenv fields);*)
-  Tvariant(variant_name,fields)
+  let ty = validate_variant_expr env level (tag_name,expr) in
+  (*print_endline (show_ty ty);*)
+  ty
 | Eapply(fct,args) -> 
   let fct_ty = type_expr env level fct in
   let args = List.map (type_expr env level) args in
@@ -594,20 +575,17 @@ and type_expr env level = function
   ty
 | Econstraint(expr,expected) -> 
   let ty = type_expr env level expr in
-  unify ty (subst_ty_to_tvar (convert_constr expected) (new_type_var level));
+  unify ty (instantiate level (convert_constr expected));
   ty
 | Erecord [] -> failwith "empty record fields"
 | Erecord l ->
-  let first_label = fst (List.hd l) in
-  let record_name = label_belong_to first_label in
-  Trecord(record_name,validate_record_expr env level l)
-
+  validate_record_expr env level l
 | Erecord_access(expr,label) ->
   let ty = type_expr env level expr in
   let record_name = label_belong_to label in
-  let fields = subst_ty_to_tvar_in_fields (get_fields record_name) (new_type_var level) in
-  unify ty (Trecord(record_name,fields));
-  List.assoc label fields
+  let record_ty = instantiate level (snd (decl_to_ty record_name)) in
+  unify ty (instantiate level record_ty);
+  List.assoc label (get_fields record_ty)
 | Ewhen(expr,body) -> 
   let ty = type_expr env level expr in
   unify ty Tbool;
@@ -616,23 +594,22 @@ and type_expr env level = function
 and validate_record_expr env level fields =
   let first_label = fst (List.hd fields) in
   let record_name = label_belong_to first_label in
-  let fields1 = List.sort (compare_label record_name) fields in
-  let fields2 = subst_ty_to_tvar_in_fields (get_fields record_name) (new_type_var level) in
-  if List.map fst fields1 = List.map fst fields2 then
+  let record_ty = instantiate level (snd (decl_to_ty record_name)) in
+  let fields = List.sort (compare_label record_name) fields in
+  if List.map fst fields = List.map fst (get_fields record_ty) then
     begin
-      unify_list (List.map (type_expr env level) (List.map snd fields1)) (List.map snd fields2);
-      fields2
+      unify_list (List.map (type_expr env level) (List.map snd fields)) (List.map snd (get_fields record_ty));
+      record_ty
     end
   else
     failwith "invalid record expression"
   
 and validate_variant_expr env level (tag_name,expr) =
   let variant_name = tag_belong_to tag_name in
-  let fields = get_fields variant_name in
-  let fields = subst_ty_to_tvar_in_fields fields (new_type_var level) in
-  let ty = List.assoc tag_name fields in
+  let variant_ty = instantiate level (snd (decl_to_ty variant_name)) in
+  let ty = List.assoc tag_name (get_fields variant_ty) in
   unify ty (type_expr env level expr);
-  fields
+  variant_ty
 
 let type_let env pat_expr =
   let level = 0 in
