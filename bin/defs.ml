@@ -113,7 +113,7 @@ let rec def_found_in_ty decl seen = function
 | Tconstr(name,_) when is_def name decl ->
   failwith (Printf.sprintf "recursive type definition %s" name)
 | Tconstr(_,_) as t ->
-  def_found_in_ty decl seen (convert_constr t)
+  def_found_in_ty decl seen (expand_abbrev t)
 | _ -> ()
 
 and def_found_in_decl name seen decl = 

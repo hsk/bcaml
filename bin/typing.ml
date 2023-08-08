@@ -190,26 +190,26 @@ and subst_ty_to_fields fields id ty =
 let rec decl_to_ty name =
   let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
-    let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
+    let (tyl,fields) =  subst_tvars_to_fields fields (collect_tvars tyl) in
     (tyl,Trecord(n,tyl,fields))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
-    let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
+    let (tyl,fields) =  subst_tvars_to_fields fields (collect_tvars tyl) in
     (tyl,Tvariant(n,tyl,fields))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
-    let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
-    (tyl,convert_constr ty)
+    let (tyl,ty) =  subst_tvars_to_tylist ty (collect_tvars tyl) in
+    (tyl,expand_abbrev ty)
   | _::rest ->
     aux rest
   | [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
 
-  and tyl_to_idl tyl =
+  and collect_tvars tyl =
     match tyl with
     | Tvar {contents=Unbound{id=id;level=_}}::tyl ->
-      id::tyl_to_idl tyl
+      id::collect_tvars tyl
     | [] -> []
     | _ -> failwith "tyl_to_idl"
 
-  and fold_idl_for_fields fields idl=
+  and subst_tvars_to_fields fields idl=
     let new_type_vars = ref [] in
     let snd = List.fold_left 
     (
@@ -220,7 +220,7 @@ let rec decl_to_ty name =
     ) fields idl in
     (!new_type_vars,snd)
 
-  and fold_idl_for_ty ty idl=
+  and subst_tvars_to_tylist ty idl=
     let new_type_vars = ref [] in
     let snd = List.fold_left 
     (
@@ -233,7 +233,7 @@ let rec decl_to_ty name =
 
   in aux !modules.tydecls
 
-and convert_constr ty =
+and expand_abbrev ty =
   match ty with 
   | Tconstr(name,params) ->
     let (tyl,ty) = decl_to_ty name in
@@ -244,14 +244,14 @@ and convert_constr ty =
       end
     else
       failwith "the number of parameters of type constructor doesn't match"
-  | Tlist t -> Tlist (convert_constr t)
-  | Tref t -> Tref (convert_constr t)
-  | Tarrow(arg,ret) -> Tarrow(convert_constr arg, convert_constr ret)
-  | Ttuple tyl -> Ttuple(List.map convert_constr tyl)
+  | Tlist t -> Tlist (expand_abbrev t)
+  | Tref t -> Tref (expand_abbrev t)
+  | Tarrow(arg,ret) -> Tarrow(expand_abbrev arg, expand_abbrev ret)
+  | Ttuple tyl -> Ttuple(List.map expand_abbrev tyl)
   | Trecord(name,tyl,fields) ->
-    Trecord(name,tyl,List.map (fun(n,t) -> (n,convert_constr t)) fields)
+    Trecord(name,tyl,List.map (fun(n,t) -> (n,expand_abbrev t)) fields)
   | Tvariant(name,tyl,fields) -> 
-    Tvariant(name,tyl,List.map (fun(n,t) -> (n,convert_constr t)) fields)
+    Tvariant(name,tyl,List.map (fun(n,t) -> (n,expand_abbrev t)) fields)
   | _ -> ty
 
 
@@ -279,14 +279,14 @@ let label_belong_to label =
   let rec aux = function
   | Drecord(name,_,fields)::_ when List.mem_assoc label fields -> name
   | _::rest -> aux rest
-  | _ -> failwith (Printf.sprintf "label_belong_to %s" label)
+  | _ -> failwith (Printf.sprintf "label not found %s" label)
   in aux !modules.tydecls
 
 let tag_belong_to tag =
   let rec aux = function
   | Dvariant(name,_,fields)::_ when List.mem_assoc tag fields -> name
   | _::rest -> aux rest
-  | _ -> failwith (Printf.sprintf "tag_belong_to %s" tag)
+  | _ -> failwith (Printf.sprintf "tag not found %s" tag)
   in aux !modules.tydecls
 
 let rec is_simple = function
