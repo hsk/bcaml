@@ -191,10 +191,10 @@ let rec decl_to_ty name =
   let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,(Trecord(n,tyl,fields)))
+    (tyl,Trecord(n,tyl,fields))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,(Tvariant(n,tyl,fields)))
+    (tyl,Tvariant(n,tyl,fields))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
     (tyl,convert_constr ty)
@@ -432,7 +432,7 @@ let rec type_patt level new_env pat ty =
       failwith "invalid or pattern"
   | Pconstraint(pat,expected) ->
     let new_env = type_patt level new_env pat ty in
-    unify ty (instantiate level (convert_constr expected));
+    unify ty (instantiate level expected);
     new_env
   | Precord fields ->
     validate_record_pat new_env level fields ty
@@ -580,7 +580,7 @@ and type_expr env level = function
   ty
 | Econstraint(expr,expected) -> 
   let ty = type_expr env level expr in
-  unify ty (instantiate level (convert_constr expected));
+  unify ty (instantiate level expected);
   ty
 | Erecord [] -> failwith "empty record fields"
 | Erecord l ->
