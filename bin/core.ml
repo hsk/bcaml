@@ -299,8 +299,10 @@ and eval1 = function
   Eassign(eval1 lhs,rhs)
 | Eassign(lhs,rhs) when not (isval rhs) ->
   Eassign(lhs,eval1 rhs)
-| Eassign(Eloc l,rhs) ->
-  updatestore l rhs;Eunit
+| Eassign(Eloc l as e,rhs) ->
+  updatestore l rhs;
+  print_endline (show_expr e);
+  Eunit
 | Econstruct(name,expr) when isval expr ->
   Econstruct(name,expr)
 | Econstruct(name,expr) ->
@@ -362,8 +364,8 @@ and eval expr =
   with Failure _ -> print_endline (show_expr expr);failwith "eval"
 
 let eval_let pat_exprs =
-  List.iter (fun (p,e) -> eval_match' p e) pat_exprs
+  List.iter (fun (p,e) -> eval_match' p (eval e)) pat_exprs
 
 
 let eval_letrec pat_exprs =
-  List.iter (fun (p,e) -> eval_match' p e) pat_exprs
+  List.iter (fun (p,e) -> eval_match' p (eval e)) pat_exprs

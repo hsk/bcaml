@@ -153,7 +153,7 @@ let rec pp_exp = function
 | Eloc _ -> "<ref>"
 | Eunit -> "()"
 | Econstruct(name,Etag) -> name
-| Econstruct(name,expr) -> name ^ "(" ^ (pp_exp expr) ^ ")" 
+| Econstruct(name,expr) -> name ^ " " ^ (pp_exp expr) 
 | Efix _ -> "<fun>"
 | Efunction _ -> "<fun>"
 | Erecord((n,x)::[]) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ "}"
