@@ -112,8 +112,14 @@ and def_list = def list
 type tyenv = (string * ty) list
 [@@deriving show]
 
+let int_to_alpha i =
+  if i < 26 then Printf.sprintf "%c" (Char.chr (i+97))
+  else Printf.sprintf "%c%d" (Char.chr ((i mod 26)+97)) (i/26)
+
 let rec pp_ty = function
-| Tvar{contents=Unbound {id=id;level=_}} -> show_id_kind id
+| Tvar{contents=Unbound {id=Idint id;level=level}} when level = generic -> "'" ^ int_to_alpha id
+| Tvar{contents=Unbound {id=Idint id;level=_}} -> "'" ^ "_" ^ int_to_alpha id
+| Tvar{contents=Unbound {id=Idstr str;level=_}} -> "'" ^ str
 | Tvar{contents=Linkto ty} -> pp_ty ty
 | Tunit -> "unit"
 | Tbool -> "bool"
@@ -124,7 +130,7 @@ let rec pp_ty = function
 | Tlist ty -> (pp_ty ty) ^ " list"
 | Tref ty -> (pp_ty ty) ^ " ref"
 | Tarrow(l,r) -> "(" ^ (pp_ty l) ^ "->" ^ (pp_ty r) ^ ")"
-| Ttuple(x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") "
+| Ttuple(x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ " * " ^ (pp_ty x)) "" xl) ^ ") "
 | Tconstr(name, []) -> name
 | Tconstr(name, x::[]) -> (pp_ty x) ^ " " ^ name
 | Tconstr(name, x::xl) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
@@ -134,7 +140,84 @@ let rec pp_ty = function
 | Tvariant(name,[],_) -> name
 | Tvariant(name,x::[],_) -> (pp_ty x) ^ " " ^ name
 | Tvariant(name,x::xl,_) -> "(" ^ (pp_ty x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_ty x)) "" xl) ^ ") " ^ name
-| _ -> failwith "pp_ty"
+| ty -> failwith (Printf.sprintf "pp_ty %s" (show_ty ty))
+
+let pp_tydecl = function
+| Drecord(n,[],(name,ty)::[]) -> 
+  "type " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "}"
+| Drecord(n,x::[],(name,ty)::[]) -> 
+  "type " ^ pp_ty x ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "}"
+| Drecord(n,x::xl,(name,ty)::[]) -> 
+  "type " ^ "(" ^ pp_ty x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "}"
+| Drecord(n,[],(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+| Drecord(n,x::[],(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ pp_ty x ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+| Drecord(n,x::xl,(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ "(" ^ pp_ty x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+
+| Dvariant(n,[],(name,Ttag)::[]) -> 
+  "type " ^ n ^ " = | " ^ name
+| Dvariant(n,x::[],(name,Ttag)::[]) -> 
+  "type " ^ pp_ty x ^ " " ^ n ^ " = | " ^ name
+| Dvariant(n,x::xl,(name,Ttag)::[]) -> 
+  "type " ^ "(" ^ pp_ty x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = | " ^ name
+| Dvariant(n,[],(name,Ttag)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ n ^ " = | " ^ name ^ pp_fields tl
+| Dvariant(n,x::[],(name,Ttag)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ pp_ty x ^ " " ^ n ^ " = | " ^ name ^ pp_fields tl
+| Dvariant(n,x::xl,(name,Ttag)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ "(" ^ pp_ty x ^List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl  ^ ")" ^ " " ^ n ^ " = | " ^ name ^ pp_fields tl
+
+| Dvariant(n,[],(name,ty)::[]) -> 
+  "type " ^ name ^ " = | " ^ n ^ " of " ^ pp_ty ty
+| Dvariant(n,x::[],(name,ty)::[]) -> 
+  "type " ^ pp_ty x ^ " " ^ n ^ " = | " ^ name ^ " of " ^ pp_ty ty
+| Dvariant(n,x::xl,(name,ty)::[]) -> 
+  "type " ^ "(" ^ pp_ty x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = | " ^ name ^ " of " ^ pp_ty ty
+| Dvariant(n,[],(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ n ^ " = | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields tl
+| Dvariant(n,x::[],(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ pp_ty x ^ " " ^ n ^ " = | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields tl
+| Dvariant(n,x::xl,(name,ty)::tl) -> 
+  let rec pp_fields = function
+  | [] -> ""
+  | (name,Ttag)::xl -> " | " ^ name ^ pp_fields xl
+  | (name,ty)::xl -> " | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields xl
+  in "type " ^ "(" ^ pp_ty x ^List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl  ^ ")" ^ " " ^ n ^ " = | " ^ name ^ " of " ^ pp_ty ty ^ pp_fields tl
+| Dabbrev(n,[],ty) -> "type " ^ n ^ " = " ^ pp_ty ty 
+| Dabbrev(n,x::[],ty) -> "type " ^ pp_ty x ^ " " ^ n ^ " = " ^ pp_ty ty 
+| Dabbrev(n,x::xl,ty) -> "type " ^ "(" ^ pp_ty x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = " ^ pp_ty ty 
+| _ -> failwith "pp_tydecl"
 
 let pp_cst = function
 | Cint i -> string_of_int i

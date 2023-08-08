@@ -4,11 +4,11 @@ let x = 5 in
 type 'a option =
 | Some of 'a
 | None;;
-(*
+
 let apply f = function
 | Some x -> Some(f x)
 | None -> None;;
-*)
+
 
 type ('a,'b) x = 
 | X of  ('a,'b) x ref
@@ -59,11 +59,11 @@ id := !id + 1;
 type x = {data:int};;
 
 {data=5}=={data=5};;
-(*
+
 Some 5;;
 
-None;;
-*)
+let a = None in a;;
+
 gen_id();;
 gen_id();;
 gen_id();;
@@ -71,10 +71,10 @@ gen_id();;
 !curr_id;;
 
 type 'a tree =
-| Node of 'a tree ref
+| Node of 'a tree ref * 'a tree ref
 | Leaf of 'a;;
 
-Node(ref (Leaf 5));;
+Node(ref (Leaf 3), ref (Leaf 5));;
 
 type y = {data:y option ref};;
 

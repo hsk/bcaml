@@ -152,6 +152,7 @@ let rec check_ast = function
   push_tydecl decl;
   check_recursive_abbrev decl;
   check_recursive_def decl;
+  List.iter (fun decl-> print_endline (pp_tydecl decl)) decl;
   check_ast rest
 | Defexpr expr::rest ->
   let ty = type_expr (get_tyenv ()) 0 expr in
