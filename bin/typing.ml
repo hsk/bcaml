@@ -147,12 +147,21 @@ let rec unify ty1 ty2 =
   | Ttuple tyl1, Ttuple tyl2 -> unify_list tyl1 tyl2
   | Tconstr(name1,tyl1), Tconstr(name2,tyl2) when name1 = name2 ->
     unify_list tyl1 tyl2
+  | Tconstr(name1,tyl1), Trecord(name2,tyl2,_) when name1 = name2 ->
+    unify_list tyl1 tyl2
+  | Tconstr(name1,tyl1), Tvariant(name2,tyl2,_) when name1 = name2 ->
+    unify_list tyl1 tyl2
+  | Trecord(name1,tyl1,_), Tconstr(name2,tyl2) when name1 = name2 ->
+    unify_list tyl1 tyl2
+  | Tvariant(name1,tyl1,_), Tconstr(name2,tyl2) when name1 = name2 ->
+    unify_list tyl1 tyl2
   | Trecord(name1,_,fields1), Trecord(name2,_,fields2) when name1 = name2 ->
     unify_list (List.map snd fields1) (List.map snd fields2)
   | Tvariant(name1,_,fields1), Tvariant(name2,_,fields2) when name1 = name2 -> 
     unify_list (List.map snd fields1) (List.map snd fields2)
   | ty1,ty2 when ty1 = ty2 -> ()
   | _ -> failwith "Cannot unify types" 
+
 and unify_list tyl1 tyl2 =
   List.iter2 unify tyl1 tyl2
 
@@ -182,10 +191,10 @@ let rec decl_to_ty name =
   let rec aux = function
   | Drecord(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,convert_constr(Trecord(n,tyl,fields)))
+    (tyl,(Trecord(n,tyl,fields)))
   | Dvariant(n,tyl,fields)::_ when n=name-> 
     let (tyl,fields) =  fold_idl_for_fields fields (tyl_to_idl tyl) in
-    (tyl,convert_constr(Tvariant(n,tyl,fields)))
+    (tyl,(Tvariant(n,tyl,fields)))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  fold_idl_for_ty ty (tyl_to_idl tyl) in
     (tyl,convert_constr ty)
@@ -503,7 +512,6 @@ and type_expr env level = function
 | Etag -> Ttag
 | Econstruct(tag_name,expr) -> 
   let ty = validate_variant_expr env level (tag_name,expr) in
-  (*print_endline (show_ty ty);*)
   ty
 | Eapply(fct,args) -> 
   let fct_ty = type_expr env level fct in
@@ -538,9 +546,6 @@ and type_expr env level = function
     ) tyl pat_expr;
   type_expr (add_env@env) level body
 | Efix(_,e) ->
-  (*let ty = new_type_var level in
-  unify (type_expr env level e) (Tarrow(ty,ty));
-  ty*)
   type_expr env level e
 | Efunction l -> 
   begin match l with
@@ -596,9 +601,11 @@ and validate_record_expr env level fields =
   let record_name = label_belong_to first_label in
   let record_ty = instantiate level (snd (decl_to_ty record_name)) in
   let fields = List.sort (compare_label record_name) fields in
+  let fields1 = (List.map (fun (n,e)->(n,type_expr env level e)) fields) in
+  let fields2 = get_fields record_ty in
   if List.map fst fields = List.map fst (get_fields record_ty) then
     begin
-      unify_list (List.map (type_expr env level) (List.map snd fields)) (List.map snd (get_fields record_ty));
+      unify_list (List.map snd fields1) (List.map snd fields2);
       record_ty
     end
   else
@@ -608,7 +615,8 @@ and validate_variant_expr env level (tag_name,expr) =
   let variant_name = tag_belong_to tag_name in
   let variant_ty = instantiate level (snd (decl_to_ty variant_name)) in
   let ty = List.assoc tag_name (get_fields variant_ty) in
-  unify ty (type_expr env level expr);
+  let ty1 = (type_expr env level expr) in
+  unify ty ty1;
   variant_ty
 
 let type_let env pat_expr =

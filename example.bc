@@ -59,13 +59,23 @@ id := !id + 1;
 type x = {data:int};;
 
 {data=5}=={data=5};;
-
+(*
 Some 5;;
 
 None;;
-
+*)
 gen_id();;
 gen_id();;
 gen_id();;
 
 !curr_id;;
+
+type 'a tree =
+| Node of 'a tree ref
+| Leaf of 'a;;
+
+Node(ref (Leaf 5));;
+
+type y = {data:y option ref};;
+
+{data=ref (Some {data=ref None})};;

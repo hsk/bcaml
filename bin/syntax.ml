@@ -146,10 +146,10 @@ let pp_cst = function
 let rec pp_exp = function
 | Econstant cst -> pp_cst cst
 | Eprim _ -> "<fun>"
-| Etuple(x::xl) -> "(" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ "," ^ (pp_exp x)) "" xl) ^ ")"
+| Etuple(x::xl) -> "(" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ ", " ^ (pp_exp x)) "" xl) ^ ")"
 | Elist [] -> "[]"
 | Elist(x::[]) -> "[" ^ (pp_exp x) ^ "]"
-| Elist(x::xl) -> "[" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ ";" ^ (pp_exp x)) "" xl) ^ "]"
+| Elist(x::xl) -> "[" ^ (pp_exp x) ^ (List.fold_left (fun s x -> s ^ "; " ^ (pp_exp x)) "" xl) ^ "]"
 | Eloc _ -> "<ref>"
 | Eunit -> "()"
 | Econstruct(name,Etag) -> name
@@ -157,7 +157,7 @@ let rec pp_exp = function
 | Efix _ -> "<fun>"
 | Efunction _ -> "<fun>"
 | Erecord((n,x)::[]) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ "}"
-| Erecord((n,x)::xl) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ (List.fold_left (fun s (n,x) -> s ^ ";" ^ n ^ "=" ^ (pp_exp x)) "" xl) ^ "}"
+| Erecord((n,x)::xl) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ (List.fold_left (fun s (n,x) -> s ^ "; " ^ n ^ "=" ^ (pp_exp x)) "" xl) ^ "}"
 | _ -> failwith "pp_exp"
  
 let get_constant = function

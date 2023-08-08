@@ -299,9 +299,8 @@ and eval1 = function
   Eassign(eval1 lhs,rhs)
 | Eassign(lhs,rhs) when not (isval rhs) ->
   Eassign(lhs,eval1 rhs)
-| Eassign(Eloc l as e,rhs) ->
+| Eassign(Eloc l,rhs) ->
   updatestore l rhs;
-  print_endline (show_expr e);
   Eunit
 | Econstruct(name,expr) when isval expr ->
   Econstruct(name,expr)

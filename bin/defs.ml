@@ -156,7 +156,7 @@ let rec check_ast = function
 | Defexpr expr::rest ->
   let ty = type_expr (get_tyenv ()) 0 expr in
   let expr = eval expr in
-  print_endline ("val " ^ pp_exp expr ^ ": "^ pp_ty ty);
+  print_endline ("- : " ^ pp_ty ty ^ " = "^ pp_exp expr);
   check_ast rest
 | Deflet l::rest ->
   let add_env = type_let (get_tyenv ()) l in
