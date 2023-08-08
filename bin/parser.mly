@@ -54,16 +54,22 @@
 %right REF DEREF LNOT NOT
 
 %start<def list> top
-%start<def> def
+%start<def list> def
 
 %%
 
 top:
 | list(def) EOF
-  { $1 }
+  { List.flatten $1 }
+
+def:
+| SEMISEMI
+  { [] }
+| def_
+  { [$1] }
 
 
-def: 
+def_: 
 | TYPE separated_nonempty_list(AND, ty_def) SEMISEMI
     { Deftype $2 }
 | LET separated_nonempty_list(AND, let_def) SEMISEMI

@@ -10,7 +10,7 @@ let interp flag inchan =
         print_string "# ";
         flush stdout;
         let def = Parser.def Lexer.token filebuf in
-        check_ast [] [def]
+        check_ast [] def
       end
     else
       let ast = Parser.top Lexer.token filebuf in
