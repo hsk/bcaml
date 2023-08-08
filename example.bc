@@ -82,3 +82,11 @@ type y = {data:y option ref};;
 
 Some true;;
 Some "a";;
+
+let rec foo n =
+  if n = 0 then true else bar (n - 1)
+
+and bar n =
+  if n = 0 then false else foo (n - 1);;
+
+bar 5;;
