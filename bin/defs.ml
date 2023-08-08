@@ -161,8 +161,12 @@ let rec check_ast env = function
   check_ast env rest
 | Deflet l::rest ->
   let add_env = type_let env l in
-  let (name,ty) = List.hd add_env in
-  print_endline (name ^ " : " ^ pp_ty ty );
+  let defined = List.length add_env - List.length env in
+  let rec split = function
+  | i when i < defined -> List.nth add_env (defined - i - 1) :: split (i + 1)
+  | _ -> [] in
+  let defined_env = split 0 in
+  List.iter (fun (name,ty) -> print_endline (name ^ " : " ^ pp_ty ty )) defined_env;
   eval_let l;
   check_ast add_env rest
 | Defletrec l::rest ->

@@ -19,5 +19,6 @@ let () =
   | InterpreterError msg -> print_endline ("InterpreterError " ^ msg)
   | Failure msg -> print_endline msg
   | Parser.Error -> print_endline "parser error"
+  | Not_found -> print_endline "an unbound variable found"
   | _ -> print_endline "something went wrong"
 

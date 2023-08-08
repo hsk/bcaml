@@ -197,7 +197,7 @@ let rec decl_to_ty name =
     (tyl,Tvariant(n,tyl,fields))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  subst_tvars_to_tylist ty (collect_tvars tyl) in
-    (tyl,ty)
+    (tyl, ty)
   | _::rest ->
     aux rest
   | [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
@@ -638,7 +638,7 @@ let type_letrec env pat_expr =
   let add_env = List.fold_left2 (type_patt (level+1)) env patl tyl in
   List.iter2 (
     fun ty (_,expr) -> 
-      unify ty (type_expr (add_env@env) (level+1) expr);
+      unify ty (type_expr add_env (level+1) expr);
       if is_simple expr then generalize level ty
     ) tyl pat_expr;
   add_env
