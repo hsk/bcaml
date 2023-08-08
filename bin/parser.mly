@@ -54,6 +54,7 @@
 %right REF DEREF LNOT NOT
 
 %start<def list> top
+%start<def> def
 
 %%
 
