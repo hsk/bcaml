@@ -197,7 +197,7 @@ let rec decl_to_ty name =
     (tyl,Tvariant(n,tyl,fields))
   | Dabbrev(n,tyl,ty)::_ when n=name-> 
     let (tyl,ty) =  subst_tvars_to_tylist ty (collect_tvars tyl) in
-    (tyl,expand_abbrev ty)
+    (tyl,ty)
   | _::rest ->
     aux rest
   | [] -> failwith (Printf.sprintf "decl_to_ty %s" name)
@@ -214,7 +214,7 @@ let rec decl_to_ty name =
     let snd = List.fold_left 
     (
       fun fields id -> 
-        let ty = new_type_var notgeneric in
+        let ty = new_type_var 1 in
         new_type_vars := !new_type_vars @ [ty];
         subst_ty_to_fields fields id ty
     ) fields idl in
@@ -225,7 +225,7 @@ let rec decl_to_ty name =
     let snd = List.fold_left 
     (
       fun t id -> 
-        let ty = new_type_var notgeneric in
+        let ty = new_type_var 1 in
         new_type_vars := !new_type_vars @ [ty];
         subst_ty t id ty
     ) ty idl in
@@ -532,7 +532,7 @@ and type_expr env level = function
   List.iter2 (
     fun ty (_,expr) -> 
       unify ty (type_expr env (level+1) expr);
-      if is_simple expr then generalize level ty
+      if is_simple expr then generalize (level+1) ty
     ) tyl pat_expr;
   type_expr (add_env@env) level body
 | Eletrec(pat_expr, body) -> 
@@ -542,7 +542,7 @@ and type_expr env level = function
   List.iter2 (
     fun ty (_,expr) -> 
       unify ty (type_expr (add_env@env) (level+1) expr);
-      if is_simple expr then generalize level ty
+      if is_simple expr then generalize (level+1) ty
     ) tyl pat_expr;
   type_expr (add_env@env) level body
 | Efix(_,e) ->

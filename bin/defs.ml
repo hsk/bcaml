@@ -147,28 +147,29 @@ let check_recursive_def decl =
     ()
   in aux decl
 
-let rec check_ast = function
+let rec check_ast env = function
 | Deftype decl::rest ->
   push_tydecl decl;
   check_recursive_abbrev decl;
   check_recursive_def decl;
   print_endline (pp_tydecls decl);
-  check_ast rest
+  check_ast env rest
 | Defexpr expr::rest ->
-  let ty = type_expr (get_tyenv ()) 0 expr in
+  let ty = type_expr env 0 expr in
   let expr = eval expr in
   print_endline ("- : " ^ pp_ty ty ^ " = "^ pp_exp expr);
-  check_ast rest
+  check_ast env rest
 | Deflet l::rest ->
-  let add_env = type_let (get_tyenv ()) l in
-  push_tyenv add_env;
+  let add_env = type_let env l in
+  let (name,ty) = List.hd add_env in
+  print_endline (name ^ " : " ^ pp_ty ty );
   eval_let l;
-  check_ast rest
+  check_ast add_env rest
 | Defletrec l::rest ->
-  let add_env = type_letrec (get_tyenv ()) l in
-  push_tyenv add_env;
-  (*print_endline (show_tyenv add_env);*)
+  let add_env = type_letrec env l in
+  let (name,ty) = List.hd add_env in
+  print_endline (name ^ " : " ^ pp_ty ty );
   eval_letrec l;
-  check_ast rest
+  check_ast add_env rest
 | [] ->
   ()

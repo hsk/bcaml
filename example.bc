@@ -26,7 +26,7 @@ type 'a a =
 
 let rec length n = function
 | [] -> n
-| _::rest -> length (n+1) rest in length 0 [1;2;3;4;5];;
+| _::rest -> length (n+1) rest;;
 
 let curr_id = ref 0;;
 
@@ -79,3 +79,6 @@ Node(ref (Leaf 3), ref (Leaf 5));;
 type y = {data:y option ref};;
 
 {data=ref (Some {data=ref None})};;
+
+Some true;;
+Some "a";;

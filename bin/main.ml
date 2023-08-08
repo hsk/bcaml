@@ -14,7 +14,7 @@ let () =
   let filebuf = Lexing.from_channel inchan in
   try
     let ast = Parser.top Lexer.token filebuf in
-    check_ast ast
+    check_ast [] ast
   with
   | InterpreterError msg -> print_endline ("InterpreterError " ^ msg)
   | Failure msg -> print_endline msg

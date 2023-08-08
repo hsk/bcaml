@@ -293,7 +293,7 @@ ident:
 
 param:
 | QUOTE lid
-   { Tvar (ref (Unbound {id=Idstr $2; level= 1})) }
+   { Tvar (ref (Unbound {id=Idstr $2; level= generic})) }
 
 
 params:

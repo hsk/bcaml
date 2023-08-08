@@ -133,7 +133,8 @@ let name_of_tvar tvar =
     varname
 
 let rec pp_ty = function
-| Tvar{contents=Unbound {id=id;level=_}} -> "'" ^ name_of_tvar id
+| Tvar{contents=Unbound {id=id;level=level}} when level = generic -> "'" ^ name_of_tvar id
+| Tvar{contents=Unbound {id=id;level=_}}  -> "'" ^ "_" ^ name_of_tvar id
 | Tvar{contents=Linkto ty} -> pp_ty ty
 | Tunit -> "unit"
 | Tbool -> "bool"
@@ -168,19 +169,19 @@ let pp_tydecl = function
   let rec pp_fields = function
   | [] -> ""
   | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
-  in "type " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+  in "type " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ pp_fields tl ^ "}"
 | Drecord(n,x::[],(name,ty)::tl) -> 
   let rec pp_fields = function
   | [] -> ""
   | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
-  in "type " ^ pp_ty x ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+  in "type " ^ pp_ty x ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty  ^ pp_fields tl ^ "}"
 | Drecord(n,x::xl,(name,ty)::tl) -> 
   let rec pp_fields = function
   | [] -> ""
   | (name,ty)::xl -> "; " ^ name ^ " = " ^ pp_ty ty ^ pp_fields xl
   in 
   let pp_x = pp_ty x in
-  "type " ^ "(" ^ pp_x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ "; " ^ pp_fields tl ^ "}"
+  "type " ^ "(" ^ pp_x ^ List.fold_left (fun s x-> s ^ "," ^ pp_ty x) "" xl ^ ")" ^ " " ^ n ^ " = {" ^ name ^ " = " ^ pp_ty ty ^ pp_fields tl ^ "}"
 
 | Dvariant(n,[],(name,Ttag)::[]) -> 
   "type " ^ n ^ " = | " ^ name
@@ -269,8 +270,8 @@ let rec pp_exp = function
 | Econstruct(name,expr) -> name ^ " " ^ (pp_exp expr) 
 | Efix _ -> "<fun>"
 | Efunction _ -> "<fun>"
-| Erecord((n,x)::[]) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ "}"
-| Erecord((n,x)::xl) -> "{" ^ n ^ "=" ^ (pp_exp x) ^ (List.fold_left (fun s (n,x) -> s ^ "; " ^ n ^ "=" ^ (pp_exp x)) "" xl) ^ "}"
+| Erecord((n,x)::[]) -> "{" ^ n ^ " = " ^ (pp_exp x) ^ "}"
+| Erecord((n,x)::xl) -> "{" ^ n ^ " = " ^ (pp_exp x) ^ (List.fold_left (fun s (n,x) -> s ^ "; " ^ n ^ " = " ^ (pp_exp x)) "" xl) ^ "}"
 | _ -> failwith "pp_exp"
  
 let get_constant = function
