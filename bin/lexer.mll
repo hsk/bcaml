@@ -106,6 +106,8 @@ rule token = parse
 
 | "_" { WILD }
 | "and" { AND }
+| "begin" { BEGIN }
+| "end" { END }
 | "else" { ELSE }
 | "function" { FUNCTION }
 | "when"  { WHEN }
